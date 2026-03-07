@@ -4,13 +4,13 @@ use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
 use crate::store::traits::CommonStoreTraitInternal;
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// Represents the internal state of the store for serialization.
 #[derive(Debug, Serialize, Deserialize)]
@@ -42,7 +42,7 @@ impl StoreInternal {
 
     /// Updates the BLAKE3 hash while holding the lock.
     fn update_blake3_hash_locked(&self) {
-        let objects = self.objects.read().unwrap();
+        let objects = self.objects.read();
         self.update_blake3_hash(&objects);
     }
 
@@ -66,7 +66,7 @@ impl StoreInternal {
         }
 
         let digest = h.finalize();
-        let mut writer = self.blake3_hash.write().expect("Merkle hash lock failed");
+        let mut writer = self.blake3_hash.write();
         *writer = *digest.as_bytes();
     }
 
@@ -76,10 +76,7 @@ impl StoreInternal {
         object_key: &ShareableString,
         definition: &ObjectDefinition,
     ) -> Result<(), StoreError> {
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         if writer.contains_key(object_key) {
             return Err(StoreError::ObjectKeyAlreadyExists);
@@ -98,10 +95,7 @@ impl StoreInternal {
 
     /// Deletes an object from the store.
     pub(crate) fn delete_object(&self, object_key: &ShareableString) -> Result<(), StoreError> {
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         let mut object = writer
             .remove(object_key)
@@ -121,10 +115,7 @@ impl StoreInternal {
         container: &Container,
     ) -> Result<(), StoreError> {
         let laundered_container = container.launder(&self.string_store);
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         if writer.contains_key(object_key) {
             return Err(StoreError::ObjectKeyAlreadyExists);
@@ -139,10 +130,7 @@ impl StoreInternal {
 
     /// Returns a copy of the container for the specified object key.
     pub(crate) fn get_object(&self, object_key: &ShareableString) -> Result<Container, StoreError> {
-        let reader = self
-            .objects
-            .read()
-            .expect("Lock acquisition failed objects hash map");
+        let reader = self.objects.read();
 
         reader
             .get(object_key)
@@ -299,7 +287,7 @@ impl Store {
         if segments.is_empty() {
             // Updating a top-level object
             {
-                let mut writer = self.internal.objects.write().unwrap();
+                let mut writer = self.internal.objects.write();
                 writer.insert(path.get_object_key().clone(), container);
                 self.internal.update_blake3_hash(&writer);
             }
@@ -321,30 +309,18 @@ impl Store {
 
     /// Returns a list of all object keys in the store.
     pub fn get_object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
-        let reader = self
-            .internal
-            .objects
-            .read()
-            .expect("Lock acquisition failed objects hash map");
+        let reader = self.internal.objects.read();
         Ok(reader.keys().cloned().collect())
     }
 
     /// Returns the overall BLAKE3 hash of the store.
     pub fn get_blake3_hash(&self) -> [u8; 32] {
-        *self
-            .internal
-            .blake3_hash
-            .read()
-            .expect("Lock acquisition failed")
+        *self.internal.blake3_hash.read()
     }
 
     /// Saves the store state to a file.
     pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), StoreError> {
-        let objects = self
-            .internal
-            .objects
-            .read()
-            .expect("Lock acquisition failed");
+        let objects = self.internal.objects.read();
         let mut objects_state = HashMap::new();
         for (key, container) in objects.iter() {
             if let ContainerDefinition::Object(def) = container.definition() {
