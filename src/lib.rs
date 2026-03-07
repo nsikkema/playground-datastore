@@ -7,7 +7,7 @@
 //! - **Store**: The root container for all data objects. It manages thread safety and persistence.
 //! - **Definitions**: Define the structure of your data (Objects, Structs, Maps, Tables, and Basic values).
 //! - **Proxies**: Lightweight handles to data within the store. They provide a way to read and update data while maintaining sync with the store.
-//! - **Paths**: Unique identifiers for every piece of data in the store.
+//! - **Paths**: Unique identifiers for every piece of data in the store. Use the `path!` macro for easy creation.
 //! - **Shareable Strings**: Interned, thread-safe strings used throughout the store to reduce memory overhead and enable fast comparisons.
 //!
 //! ## Thread Safety and Invariants
@@ -24,6 +24,7 @@
 //! use datastore::store::{Store, StorePath};
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
 //! use datastore::store::traits::ProxyStoreTrait;
+//! use datastore::path;
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
@@ -35,13 +36,17 @@
 //! store.create_object("user_1".into(), &def).unwrap();
 //!
 //! // 3. Access data via a proxy
-//! let mut proxy = store.object(&"user_1".into()).unwrap();
-//! let mut name_proxy = proxy.basic("name").unwrap();
+//! let mut user_proxy = store.object(&"user_1".into()).unwrap();
+//! let mut name_proxy = user_proxy.basic("name").unwrap();
 //!
 //! name_proxy.set_value("Alice");
 //! name_proxy.push().unwrap();
 //!
 //! assert_eq!(name_proxy.value().unwrap().as_str(), "Alice");
+//!
+//! // You can also access data directly via paths
+//! let mut name_proxy_direct = store.basic(&path!("user_1" / "name")).unwrap();
+//! assert_eq!(name_proxy_direct.value().unwrap().as_str(), "Alice");
 //! ```
 
 pub mod definition;
