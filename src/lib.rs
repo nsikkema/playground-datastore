@@ -1,3 +1,49 @@
+//! # Datastore
+//!
+//! A hierarchical, thread-safe, and observable data store with proxy-based access.
+//!
+//! ## Core Concepts
+//!
+//! - **Store**: The root container for all data objects. It manages thread safety and persistence.
+//! - **Definitions**: Define the structure of your data (Objects, Structs, Maps, Tables, and Basic values).
+//! - **Proxies**: Lightweight handles to data within the store. They provide a way to read and update data while maintaining sync with the store.
+//! - **Paths**: Unique identifiers for every piece of data in the store.
+//! - **Shareable Strings**: Interned, thread-safe strings used throughout the store to reduce memory overhead and enable fast comparisons.
+//!
+//! ## Thread Safety and Invariants
+//!
+//! - **Thread Safety**: The `Store` is thread-safe (`Send` + `Sync`) and uses internal locking (`parking_lot::RwLock`).
+//! - **Proxy Validity**: A proxy becomes "invalid" (expired) if its underlying data is removed from the store. Use `proxy.is_valid()` to check.
+//! - **Cloning**: Cloning a `Store` or a `Proxy` creates a new handle to the *same* underlying data (shallow copy).
+//! - **Change Tracking**: Use `has_changed()` on a proxy to check if the store has been updated since the proxy was last synced.
+//! - **Updates**: Updates via proxies are pushed to the store. Other proxies must `pull()` to see these changes.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use datastore::store::{Store, StorePath};
+//! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
+//! use datastore::store::traits::ProxyStoreTrait;
+//!
+//! // 1. Define your data structure
+//! let mut builder = ObjectDefinition::builder("My Object");
+//! builder.add("name", PropertyDefinition::new("User Name", BasicDefinition::new_string("Name"))).unwrap();
+//! let def = builder.finish();
+//!
+//! // 2. Create a store and add an object
+//! let store = Store::new(Default::default());
+//! store.create_object(&"user_1".into(), &def).unwrap();
+//!
+//! // 3. Access data via a proxy
+//! let mut proxy = store.get_object(&"user_1".into()).unwrap();
+//! let mut name_proxy = proxy.get_basic("name").unwrap();
+//!
+//! name_proxy.set_value("Alice");
+//! name_proxy.push().unwrap();
+//!
+//! assert_eq!(name_proxy.get_value().unwrap().as_str(), "Alice");
+//! ```
+
 pub mod definition;
 pub mod shareable_string;
 pub mod store;
