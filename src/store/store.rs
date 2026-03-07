@@ -30,10 +30,10 @@ pub(crate) struct StoreInternal {
 
 impl StoreInternal {
     /// Creates a new `StoreInternal`.
-    fn new() -> Self {
+    fn new(string_store: SharedStringStore) -> Self {
         let store = StoreInternal {
             objects: HashMap::new().into(),
-            string_store: SharedStringStore::new(),
+            string_store,
             blake3_hash: [0u8; 32].into(),
         };
         store.update_blake3_hash_locked();
@@ -159,9 +159,9 @@ pub struct Store {
 
 impl Store {
     /// Creates a new, empty `Store`.
-    pub fn new() -> Self {
+    pub fn new(string_store: SharedStringStore) -> Self {
         Self {
-            internal: Arc::new(StoreInternal::new()),
+            internal: Arc::new(StoreInternal::new(string_store)),
         }
     }
 

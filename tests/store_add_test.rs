@@ -1,12 +1,12 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
-use datastore::shareable_string::ShareableString;
+use datastore::shareable_string::{ShareableString, SharedStringStore};
 use datastore::store::traits::ProxyStoreTrait;
 use datastore::store::{Store, StorePath};
 
 #[test]
 fn test_add_object_from_another_store() {
-    let store1 = Store::new();
-    let store2 = Store::new();
+    let store1 = Store::new(SharedStringStore::new());
+    let store2 = Store::new(SharedStringStore::new());
 
     let obj_key1 = ShareableString::from("object1");
     let def = ObjectDefinition::builder("Test Object")

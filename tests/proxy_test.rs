@@ -2,13 +2,13 @@ use datastore::definition::{
     BasicDefinition, ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition,
     TableDefinition,
 };
-use datastore::shareable_string::ShareableString;
+use datastore::shareable_string::{ShareableString, SharedStringStore};
 use datastore::store::Store;
 use datastore::store::traits::ProxyStoreTrait;
 
 #[test]
 fn test_complex_proxy_structure() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     // 1. Create a Table Definition
     let table_def = TableDefinition::new(
@@ -112,7 +112,7 @@ fn test_complex_proxy_structure() {
 
 #[test]
 fn test_proxy_basic_operations() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
@@ -164,7 +164,7 @@ fn test_proxy_basic_operations() {
 
 #[test]
 fn test_proxy_deleted_object() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
@@ -195,7 +195,7 @@ fn test_proxy_deleted_object() {
 
 #[test]
 fn test_proxy_multiple_properties() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     let mut builder = ObjectDefinition::builder("Multi Prop Object");
     builder
@@ -248,7 +248,7 @@ fn test_proxy_multiple_properties() {
 
 #[test]
 fn test_proxy_sync_from_store() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     let mut builder = ObjectDefinition::builder("Sync Object");
     builder
@@ -283,7 +283,7 @@ fn test_proxy_sync_from_store() {
 
 #[test]
 fn test_proxy_is_valid_initially() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
     let mut builder = ObjectDefinition::builder("Test Object");
     builder
         .add(
@@ -300,7 +300,7 @@ fn test_proxy_is_valid_initially() {
 
 #[test]
 fn test_proxy_get_object() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");

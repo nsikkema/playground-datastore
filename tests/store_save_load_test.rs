@@ -2,14 +2,14 @@ use datastore::definition::{
     BasicDefinition, ChoiceDefinition, FileDefinition, MapDefinition, ObjectDefinition,
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
-use datastore::shareable_string::ShareableString;
+use datastore::shareable_string::{ShareableString, SharedStringStore};
 use datastore::store::traits::ProxyStoreTrait;
 use datastore::store::{Store, StorePath};
 use std::fs;
 
 #[test]
 fn test_save_load_file() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
     let obj_key = ShareableString::from("my_object");
     let def = ObjectDefinition::builder("My Test Object")
         .with(
@@ -71,7 +71,7 @@ fn test_save_load_file() {
 
 #[test]
 fn test_save_load_comprehensive() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
 
     // 1. Define nested structures
     let table_def = TableDefinition::new(
@@ -324,7 +324,7 @@ fn test_save_load_comprehensive() {
 
 #[test]
 fn test_launder_consistency_after_load() {
-    let store = Store::new();
+    let store = Store::new(SharedStringStore::new());
     let obj_key = ShareableString::from("test_obj");
     let def = ObjectDefinition::builder("Test").finish();
     store.create_object(&obj_key, &def).unwrap();
