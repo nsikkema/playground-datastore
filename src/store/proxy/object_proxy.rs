@@ -41,7 +41,7 @@ impl ObjectProxy {
     }
 
     /// Returns the keys of the properties in the object.
-    pub fn get_keys(&self) -> &Vec<ShareableString> {
+    pub fn keys(&self) -> &Vec<ShareableString> {
         &self.keys
     }
 
@@ -59,22 +59,22 @@ impl ObjectProxy {
     }
 
     /// Returns a `BasicProxy` for the property with the given key.
-    pub fn get_basic<S: Into<ShareableString> + AsRef<str>>(
+    pub fn basic<S: Into<ShareableString> + AsRef<str>>(
         &mut self,
         key: S,
     ) -> Result<BasicProxy, StoreError> {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
-        
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_basic(&path)
+        self.store.basic(&path)
     }
 
     /// Returns a `TableProxy` for the property with the given key.
-    pub fn get_table<S: Into<ShareableString> + AsRef<str>>(
+    pub fn table<S: Into<ShareableString> + AsRef<str>>(
         &mut self,
         key: S,
     ) -> Result<TableProxy, StoreError> {
@@ -85,11 +85,11 @@ impl ObjectProxy {
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_table(&path)
+        self.store.table(&path)
     }
 
     /// Returns a `ContainerProxy` for the property with the given key.
-    pub fn get_container<S: Into<ShareableString> + AsRef<str>>(
+    pub fn container<S: Into<ShareableString> + AsRef<str>>(
         &mut self,
         key: S,
     ) -> Result<ContainerProxy, StoreError> {
@@ -100,17 +100,17 @@ impl ObjectProxy {
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_container(&path)
+        self.store.container(&path)
     }
 
     /// Returns all property keys in the object.
-    pub fn get_all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+    pub fn all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
         Ok(self.keys.clone())
     }
 }
 
 impl ProxyStoreTrait for ObjectProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
@@ -135,7 +135,7 @@ impl ProxyStoreTrait for ObjectProxy {
             return Ok(());
         }
 
-        let proxy = self.store.get_object(&self.path)?;
+        let proxy = self.store.object(&self.path)?;
         self.keys = proxy.keys;
         self.last_sync_hash = proxy.last_sync_hash;
 
@@ -146,7 +146,7 @@ impl ProxyStoreTrait for ObjectProxy {
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
-        self.store.get_object(&self.path)
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
+        self.store.object(&self.path)
     }
 }

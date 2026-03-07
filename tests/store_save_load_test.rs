@@ -25,7 +25,7 @@ fn test_save_load_file() {
         .build();
 
     {
-        let mut basic = store.get_basic(&prop_path).unwrap();
+        let mut basic = store.basic(&prop_path).unwrap();
         basic.set_value("Saved data");
         basic.push().unwrap();
     }
@@ -56,9 +56,9 @@ fn test_save_load_file() {
 
     // Check data consistency
     let loaded_basic = loaded_store
-        .get_basic(&prop_path)
+        .basic(&prop_path)
         .expect("Could not find property in loaded store");
-    assert_eq!(loaded_basic.get_value().unwrap().as_str(), "Saved data");
+    assert_eq!(loaded_basic.value().unwrap().as_str(), "Saved data");
 
     // Check hash consistency
     let loaded_hash = loaded_store.get_blake3_hash();
@@ -141,55 +141,55 @@ fn test_save_load_comprehensive() {
     // 3. Populate data
     // p_string
     {
-        let mut p = obj_proxy.get_basic("p_string").unwrap();
+        let mut p = obj_proxy.basic("p_string").unwrap();
         p.set_value("Hello String");
         p.push().unwrap();
     }
     // p_number
     {
-        let mut p = obj_proxy.get_basic("p_number").unwrap();
+        let mut p = obj_proxy.basic("p_number").unwrap();
         p.set_value("12345");
         p.push().unwrap();
     }
     // p_file
     {
-        let mut p = obj_proxy.get_basic("p_file").unwrap();
+        let mut p = obj_proxy.basic("p_file").unwrap();
         p.set_value("test.txt");
         p.push().unwrap();
     }
     // p_choice
     {
-        let mut p = obj_proxy.get_basic("p_choice").unwrap();
+        let mut p = obj_proxy.basic("p_choice").unwrap();
         p.set_value("B");
         p.push().unwrap();
     }
     // p_struct -> s_basic
     {
         let path = obj_proxy
-            .get_container("p_struct")
+            .container("p_struct")
             .unwrap()
-            .get_path()
+            .path()
             .clone()
             .to_builder()
             .struct_item("s_basic")
             .build()
             .unwrap();
-        let mut p = store.get_basic(&path).unwrap();
+        let mut p = store.basic(&path).unwrap();
         p.set_value("Struct Value");
         p.push().unwrap();
     }
     // p_struct -> s_table
     {
         let path = obj_proxy
-            .get_container("p_struct")
+            .container("p_struct")
             .unwrap()
-            .get_path()
+            .path()
             .clone()
             .to_builder()
             .struct_item("s_table")
             .build()
             .unwrap();
-        let mut p = store.get_table(&path).unwrap();
+        let mut p = store.table(&path).unwrap();
         p.append_row();
         p.set_cell(0, "col_str", "Row 0".into()).unwrap();
         p.set_cell(0, "col_num", "10".into()).unwrap();
@@ -197,17 +197,17 @@ fn test_save_load_comprehensive() {
     }
     // p_table
     {
-        let mut p = obj_proxy.get_table("p_table").unwrap();
+        let mut p = obj_proxy.table("p_table").unwrap();
         p.append_row();
         p.set_cell(0, "col_str", "Table Row".into()).unwrap();
         p.push().unwrap();
     }
     // p_map
     {
-        let map_container = obj_proxy.get_container("p_map").unwrap();
+        let map_container = obj_proxy.container("p_map").unwrap();
         let item_key = ShareableString::from("entry_1");
         let entry_proxy = map_container.insert_map_entry(item_key).unwrap();
-        let path = entry_proxy.get_path();
+        let path = entry_proxy.path();
         // Entry in map is a Struct. Let's set its s_basic.
         let basic_path = path
             .clone()
@@ -215,7 +215,7 @@ fn test_save_load_comprehensive() {
             .struct_item("s_basic")
             .build()
             .unwrap();
-        let mut p = store.get_basic(&basic_path).unwrap();
+        let mut p = store.basic(&basic_path).unwrap();
         p.set_value("Map Struct Value");
         p.push().unwrap();
     }
@@ -230,41 +230,41 @@ fn test_save_load_comprehensive() {
     let loaded_store = Store::from_json(&json_content).expect("Failed to load");
 
     let mut loaded_obj = loaded_store
-        .get_object(&StorePath::builder(obj_key.clone()).build())
+        .object(&StorePath::builder(obj_key.clone()).build())
         .unwrap();
 
     assert_eq!(
         loaded_obj
-            .get_basic("p_string")
+            .basic("p_string")
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "Hello String"
     );
     assert_eq!(
         loaded_obj
-            .get_basic("p_number")
+            .basic("p_number")
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "12345"
     );
     assert_eq!(
         loaded_obj
-            .get_basic("p_file")
+            .basic("p_file")
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "test.txt"
     );
     assert_eq!(
         loaded_obj
-            .get_basic("p_choice")
+            .basic("p_choice")
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "B"
@@ -277,9 +277,9 @@ fn test_save_load_comprehensive() {
         .build();
     assert_eq!(
         loaded_store
-            .get_basic(&s_basic_path)
+            .basic(&s_basic_path)
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "Struct Value"
@@ -293,9 +293,9 @@ fn test_save_load_comprehensive() {
         .build();
     assert_eq!(
         loaded_store
-            .get_basic(&m_basic_path)
+            .basic(&m_basic_path)
             .unwrap()
-            .get_value()
+            .value()
             .unwrap()
             .as_ref(),
         "Map Struct Value"
@@ -305,7 +305,7 @@ fn test_save_load_comprehensive() {
     let table_path = StorePath::builder(obj_key.clone())
         .property("p_table")
         .build();
-    let loaded_table = loaded_store.get_table(&table_path).unwrap();
+    let loaded_table = loaded_store.table(&table_path).unwrap();
     assert_eq!(loaded_table.row_count(), 1);
     assert_eq!(
         loaded_table

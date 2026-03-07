@@ -17,7 +17,7 @@ pub(in crate::store) trait CommonStoreTraitInternal {
 /// Trait for proxy objects that provide access to store data.
 pub trait ProxyStoreTrait {
     /// Returns the path to the data this proxy represents.
-    fn get_path(&self) -> &StorePath;
+    fn path(&self) -> &StorePath;
     /// Returns a description of the data.
     fn description(&self) -> ShareableString;
     /// Checks if the proxy is still valid.
@@ -29,5 +29,5 @@ pub trait ProxyStoreTrait {
     /// Pushes the local changes to the store.
     fn push(&mut self) -> Result<(), StoreError>;
     /// Returns an `ObjectProxy` for the object containing this data.
-    fn get_object(&self) -> Result<ObjectProxy, StoreError>;
+    fn object(&self) -> Result<ObjectProxy, StoreError>;
 }

@@ -31,7 +31,7 @@ fn main() {
     println!("Store loaded from {}", path);
 
     // 4. Verify Loaded Data
-    let mut keys = loaded_store.get_object_keys().unwrap();
+    let mut keys = loaded_store.object_keys().unwrap();
     keys.sort();
     assert_eq!(keys.len(), 1);
     assert_eq!(keys[0].as_str(), "app_settings");

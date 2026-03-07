@@ -158,12 +158,12 @@ impl Store {
     ) -> Result<ObjectProxy, StoreError> {
         self.internal.create_object(object_key, definition)?;
         let path = StorePath::builder(object_key.clone()).build();
-        self.get_object(&path)
+        self.object(&path)
     }
 
     /// Returns an `ObjectProxy` for the specified path.
-    pub fn get_object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
-        let object_key = store_path.get_object_key();
+    pub fn object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
+        let object_key = store_path.object_key();
         let container = self.internal.get_object(object_key)?;
         if let ContainerDefinition::Object(definition) = container.definition() {
             let keys = container.keys();
@@ -187,10 +187,10 @@ impl Store {
         &self,
         store_path: &StorePath,
     ) -> Result<Container, StoreError> {
-        let object_key = store_path.get_object_key();
+        let object_key = store_path.object_key();
         let mut current_container = self.internal.get_object(object_key)?;
 
-        for segment in store_path.get_segments() {
+        for segment in store_path.segments() {
             match segment {
                 Segment::Property(key) | Segment::MapKey(key) | Segment::StructItem(key) => {
                     match current_container.get_item(key)? {
@@ -204,7 +204,7 @@ impl Store {
     }
 
     /// Returns a `ContainerProxy` for the specified path.
-    pub fn get_container(&self, store_path: &StorePath) -> Result<ContainerProxy, StoreError> {
+    pub fn container(&self, store_path: &StorePath) -> Result<ContainerProxy, StoreError> {
         let container = self.get_container_internal(store_path)?;
         let keys = container.keys();
         let object_hash = container.hash_container().clone();
@@ -221,8 +221,8 @@ impl Store {
     }
 
     /// Returns a `TableProxy` for the specified path.
-    pub fn get_table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
-        let segments = store_path.get_segments();
+    pub fn table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
+        let segments = store_path.segments();
         if segments.is_empty() {
             return Err(StoreError::InvalidPath);
         }
@@ -247,8 +247,8 @@ impl Store {
     }
 
     /// Returns a `BasicProxy` for the specified path.
-    pub fn get_basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
-        let segments = store_path.get_segments();
+    pub fn basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
+        let segments = store_path.segments();
         if segments.is_empty() {
             return Err(StoreError::InvalidPath);
         }
@@ -279,13 +279,13 @@ impl Store {
         mut container: Container,
     ) -> Result<(), StoreError> {
         container.update_blake3_hash();
-        let segments = path.get_segments();
+        let segments = path.segments();
 
         if segments.is_empty() {
             // Updating a top-level object
             {
                 let mut writer = self.internal.objects.write();
-                writer.insert(path.get_object_key().clone(), container);
+                writer.insert(path.object_key().clone(), container);
                 self.internal.update_blake3_hash(&writer);
             }
             return Ok(());
@@ -305,7 +305,7 @@ impl Store {
     }
 
     /// Returns a list of all object keys in the store.
-    pub fn get_object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+    pub fn object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
         let reader = self.internal.objects.read();
         Ok(reader.keys().cloned().collect())
     }
@@ -377,15 +377,15 @@ impl Store {
         let container = source_store.internal.get_object(source_object_key)?;
         self.internal.add_object(object_key, &container)?;
         let path = StorePath::builder(object_key.clone()).build();
-        self.get_object(&path)
+        self.object(&path)
     }
 }
 
 /// Splits a path into its parent path and the last segment.
 fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
-    let mut segments = path.get_segments().clone();
+    let mut segments = path.segments().clone();
     let last_segment = segments.pop().ok_or(StoreError::InvalidPath)?;
-    let mut parent_path = StorePath::builder(path.get_object_key().clone()).build();
+    let mut parent_path = StorePath::builder(path.object_key().clone()).build();
     for segment in segments {
         match segment {
             Segment::Property(key) => {

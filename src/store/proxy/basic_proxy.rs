@@ -25,12 +25,12 @@ impl BasicProxy {
     }
 
     /// Returns a reference to the basic definition.
-    pub fn get_definition(&self) -> &BasicDefinition {
+    pub fn definition(&self) -> &BasicDefinition {
         &self.data.definition()
     }
 
     /// Returns the current value from the proxy.
-    pub fn get_value(&self) -> Result<ShareableString, StoreError> {
+    pub fn value(&self) -> Result<ShareableString, StoreError> {
         Ok(self.data.get())
     }
 
@@ -42,12 +42,12 @@ impl BasicProxy {
 }
 
 impl ProxyStoreTrait for BasicProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
     fn description(&self) -> ShareableString {
-        self.get_definition().description()
+        self.definition().description()
     }
 
     fn is_valid(&self) -> bool {
@@ -67,7 +67,7 @@ impl ProxyStoreTrait for BasicProxy {
             return Ok(());
         }
 
-        let proxy = self.store.get_basic(&self.path)?;
+        let proxy = self.store.basic(&self.path)?;
 
         self.data = proxy.data;
         self.last_sync_hash = proxy.last_sync_hash;
@@ -85,8 +85,8 @@ impl ProxyStoreTrait for BasicProxy {
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
         let path = self.path.clone().get_object();
-        self.store.get_object(&path)
+        self.store.object(&path)
     }
 }

@@ -115,12 +115,12 @@ impl StorePath {
     }
 
     /// Returns the object key part of the path.
-    pub fn get_object_key(&self) -> &ShareableString {
+    pub fn object_key(&self) -> &ShareableString {
         &self.object_key
     }
 
     /// Returns the segments of the path.
-    pub fn get_segments(&self) -> &Vec<Segment> {
+    pub fn segments(&self) -> &Vec<Segment> {
         &self.segments
     }
 
@@ -525,8 +525,8 @@ mod tests {
 
         assert!(path2.is_ok());
         let path2 = path2.unwrap();
-        assert_eq!(path2.get_object_key(), &obj);
-        assert_eq!(path2.get_segments().len(), 2);
+        assert_eq!(path2.object_key(), &obj);
+        assert_eq!(path2.segments().len(), 2);
         assert_eq!(path2.get_kind(), &PathKind::MapEntry);
     }
 }

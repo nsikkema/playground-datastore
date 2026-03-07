@@ -27,7 +27,7 @@ impl TableProxy {
     }
 
     /// Returns a reference to the table definition.
-    pub fn get_definition(&self) -> &TableDefinition {
+    pub fn definition(&self) -> &TableDefinition {
         self.data.definition()
     }
 
@@ -74,12 +74,12 @@ impl TableProxy {
 }
 
 impl ProxyStoreTrait for TableProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
     fn description(&self) -> ShareableString {
-        self.get_definition().description()
+        self.definition().description()
     }
 
     fn is_valid(&self) -> bool {
@@ -94,12 +94,12 @@ impl ProxyStoreTrait for TableProxy {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
-        
+
         if !self.has_changed() {
             return Ok(());
         }
 
-        let proxy = self.store.get_table(&self.path)?;
+        let proxy = self.store.table(&self.path)?;
 
         self.data = proxy.data;
         self.last_sync_hash = proxy.last_sync_hash;
@@ -111,14 +111,14 @@ impl ProxyStoreTrait for TableProxy {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
-        
+
         self.store.set_table(&self.path, &self.data)?;
         self.last_sync_hash = self.data.current_blake3_hash();
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
         let path = self.path.clone().get_object();
-        self.store.get_object(&path)
+        self.store.object(&path)
     }
 }

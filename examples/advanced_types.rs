@@ -68,22 +68,22 @@ fn main() {
         .create_object(&"my_company".into(), &company_def)
         .unwrap();
 
-    let mut company_proxy = store.get_object(&"my_company".into()).unwrap();
+    let mut company_proxy = store.object(&"my_company".into()).unwrap();
     let company_key = "my_company";
 
     // Access the 'hq_address' struct
     // We can now use the 'path!' macro for more ergonomic path construction.
     let street_path = path!(company_key / "hq_address" / "street");
 
-    let mut street_proxy = store.get_basic(&street_path).unwrap();
+    let mut street_proxy = store.basic(&street_path).unwrap();
     street_proxy.set_value("123 Main St");
     street_proxy.push().unwrap();
 
-    println!("HQ Street: {}", street_proxy.get_value().unwrap());
+    println!("HQ Street: {}", street_proxy.value().unwrap());
 
     // 7. Interact with the Map
     // Maps allow inserting new entries that follow the defined Struct schema.
-    let branches_proxy = company_proxy.get_container("branches").unwrap();
+    let branches_proxy = company_proxy.container("branches").unwrap();
 
     // Insert a new branch "london"
     branches_proxy.insert_map_entry("london").unwrap();
@@ -91,17 +91,17 @@ fn main() {
     // Now we can access the 'london' branch fields using a tuple for ergonomics.
     let london_city_path: StorePath = ("my_company", "branches", "london", "city").into();
 
-    let mut london_city_proxy = store.get_basic(&london_city_path).unwrap();
+    let mut london_city_proxy = store.basic(&london_city_path).unwrap();
     london_city_proxy.set_value("London");
     london_city_proxy.push().unwrap();
 
     println!(
         "Branch 'london' city: {}",
-        london_city_proxy.get_value().unwrap()
+        london_city_proxy.value().unwrap()
     );
 
     // 8. Interact with the Table
-    let mut table_proxy = company_proxy.get_table("stock").unwrap();
+    let mut table_proxy = company_proxy.table("stock").unwrap();
 
     // Add some rows
     table_proxy.append_row();

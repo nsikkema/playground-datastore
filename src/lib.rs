@@ -35,13 +35,13 @@
 //! store.create_object(&"user_1".into(), &def).unwrap();
 //!
 //! // 3. Access data via a proxy
-//! let mut proxy = store.get_object(&"user_1".into()).unwrap();
-//! let mut name_proxy = proxy.get_basic("name").unwrap();
+//! let mut proxy = store.object(&"user_1".into()).unwrap();
+//! let mut name_proxy = proxy.basic("name").unwrap();
 //!
 //! name_proxy.set_value("Alice");
 //! name_proxy.push().unwrap();
 //!
-//! assert_eq!(name_proxy.get_value().unwrap().as_str(), "Alice");
+//! assert_eq!(name_proxy.value().unwrap().as_str(), "Alice");
 //! ```
 
 pub mod definition;

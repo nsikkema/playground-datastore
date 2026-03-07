@@ -37,7 +37,7 @@ impl ContainerProxy {
 }
 
 impl ProxyStoreTrait for ContainerProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
@@ -65,7 +65,7 @@ impl ProxyStoreTrait for ContainerProxy {
             return Ok(());
         }
 
-        let container = self.store.get_container(&self.path)?;
+        let container = self.store.container(&self.path)?;
 
         self.keys = container.keys;
         self.last_sync_hash = container.last_sync_hash;
@@ -77,13 +77,13 @@ impl ProxyStoreTrait for ContainerProxy {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
-        
+
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
         let path = self.path.clone().get_object();
-        self.store.get_object(&path)
+        self.store.object(&path)
     }
 }
 
@@ -100,7 +100,7 @@ impl ContainerProxy {
                 let entry_path = self.path.clone().to_builder().map_key(key).build().unwrap();
                 self.store
                     .update_container_at_path(&entry_path, entry_container)?;
-                self.store.get_container(&entry_path)
+                self.store.container(&entry_path)
             }
             _ => Err(StoreError::PropertyNotFound),
         }

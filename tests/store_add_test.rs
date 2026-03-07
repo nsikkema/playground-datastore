@@ -21,7 +21,7 @@ fn test_add_object_from_another_store() {
     let prop_path = StorePath::builder(obj_key1.clone())
         .property(ShareableString::from("prop1"))
         .build();
-    let mut basic1 = store1.get_basic(&prop_path).unwrap();
+    let mut basic1 = store1.basic(&prop_path).unwrap();
     basic1.set_value("Hello from Store 1");
     basic1.push().unwrap();
 
@@ -34,20 +34,20 @@ fn test_add_object_from_another_store() {
     let prop_path2 = StorePath::builder(obj_key2.clone())
         .property(ShareableString::from("prop1"))
         .build();
-    let basic2 = store2.get_basic(&prop_path2).unwrap();
-    assert_eq!(basic2.get_value().unwrap().as_str(), "Hello from Store 1");
+    let basic2 = store2.basic(&prop_path2).unwrap();
+    assert_eq!(basic2.value().unwrap().as_str(), "Hello from Store 1");
 
     // Verify they are independent
-    let mut basic2_mut = store2.get_basic(&prop_path2).unwrap();
+    let mut basic2_mut = store2.basic(&prop_path2).unwrap();
     basic2_mut.set_value("Changed in Store 2");
 
-    let basic1_after = store1.get_basic(&prop_path).unwrap();
+    let basic1_after = store1.basic(&prop_path).unwrap();
     assert_eq!(
-        basic1_after.get_value().unwrap().as_str(),
+        basic1_after.value().unwrap().as_str(),
         "Hello from Store 1"
     );
     assert_eq!(
-        basic2_mut.get_value().unwrap().as_str(),
+        basic2_mut.value().unwrap().as_str(),
         "Changed in Store 2"
     );
 }
