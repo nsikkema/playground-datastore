@@ -21,7 +21,7 @@ fn test_save_load_file() {
 
     let _proxy = store.create_object(&obj_key, &def).unwrap();
     let prop_path = StorePath::builder(obj_key.clone())
-        .property(ShareableString::from("prop1"))
+        .property("prop1")
         .build();
 
     {
@@ -171,7 +171,7 @@ fn test_save_load_comprehensive() {
             .get_path()
             .clone()
             .to_builder()
-            .struct_item(ShareableString::from("s_basic"))
+            .struct_item("s_basic")
             .build()
             .unwrap();
         let mut p = store.get_basic(&path).unwrap();
@@ -186,7 +186,7 @@ fn test_save_load_comprehensive() {
             .get_path()
             .clone()
             .to_builder()
-            .struct_item(ShareableString::from("s_table"))
+            .struct_item("s_table")
             .build()
             .unwrap();
         let mut p = store.get_table(&path).unwrap();
@@ -212,7 +212,7 @@ fn test_save_load_comprehensive() {
         let basic_path = path
             .clone()
             .to_builder()
-            .struct_item(ShareableString::from("s_basic"))
+            .struct_item("s_basic")
             .build()
             .unwrap();
         let mut p = store.get_basic(&basic_path).unwrap();
@@ -272,8 +272,8 @@ fn test_save_load_comprehensive() {
 
     // Verify Struct
     let s_basic_path = StorePath::builder(obj_key.clone())
-        .property("p_struct".into())
-        .struct_item("s_basic".into())
+        .property("p_struct")
+        .struct_item("s_basic")
         .build();
     assert_eq!(
         loaded_store
@@ -287,9 +287,9 @@ fn test_save_load_comprehensive() {
 
     // Verify Map
     let m_basic_path = StorePath::builder(obj_key.clone())
-        .property("p_map".into())
-        .map_key("entry_1".into())
-        .struct_item("s_basic".into())
+        .property("p_map")
+        .map_key("entry_1")
+        .struct_item("s_basic")
         .build();
     assert_eq!(
         loaded_store
@@ -303,7 +303,7 @@ fn test_save_load_comprehensive() {
 
     // Verify Table
     let table_path = StorePath::builder(obj_key.clone())
-        .property("p_table".into())
+        .property("p_table")
         .build();
     let loaded_table = loaded_store.get_table(&table_path).unwrap();
     assert_eq!(loaded_table.row_count(), 1);

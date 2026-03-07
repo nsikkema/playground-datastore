@@ -70,6 +70,8 @@ pub enum StoreError {
     KeyNotFound,
     /// The provided path is invalid.
     InvalidPath,
+    /// The provided path segment is invalid.
+    InvalidPathSegment(String),
     /// The requested index was not found.
     IndexNotFound,
     /// Undo operation is not available.
@@ -95,6 +97,7 @@ impl Display for StoreError {
             StoreError::ExpiredProxy => write!(f, "Proxy is invalid"),
             StoreError::KeyNotFound => write!(f, "Key not found"),
             StoreError::InvalidPath => write!(f, "Invalid path"),
+            StoreError::InvalidPathSegment(s) => write!(f, "Invalid path segment: {}", s),
             StoreError::IndexNotFound => write!(f, "Index not found"),
             StoreError::UndoNotAvailable => write!(f, "Undo not available"),
             StoreError::RedoNotAvailable => write!(f, "Redo not available"),
