@@ -1,0 +1,41 @@
+use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
+use datastore::store::Store;
+use std::fs;
+
+fn main() {
+    let path = "example_store.json";
+
+    // 1. Create a Store and Populate it
+    let store = Store::new(Default::default());
+    let mut builder = ObjectDefinition::builder("Settings Object");
+    builder
+        .add(
+            "theme",
+            PropertyDefinition::new("App theme", BasicDefinition::new_string("light")),
+        )
+        .unwrap();
+    let def = builder.finish();
+
+    store.create_object(&"app_settings".into(), &def).unwrap();
+
+    // 2. Save the Store to a File
+    // This will serialize the entire store state (objects, definitions, and shared strings).
+    let json = store.to_json().expect("Failed to serialize store");
+    fs::write(path, json).expect("Failed to save store");
+    println!("Store saved to {}", path);
+
+    // 3. Load the Store from the File
+    // This creates a new store instance with the same state.
+    let loaded_json = fs::read_to_string(path).expect("Failed to read store file");
+    let loaded_store = Store::from_json(&loaded_json).expect("Failed to load store");
+    println!("Store loaded from {}", path);
+
+    // 4. Verify Loaded Data
+    let mut keys = loaded_store.get_object_keys().unwrap();
+    keys.sort();
+    assert_eq!(keys.len(), 1);
+    assert_eq!(keys[0].as_str(), "app_settings");
+
+    // Clean up
+    fs::remove_file(path).unwrap();
+}

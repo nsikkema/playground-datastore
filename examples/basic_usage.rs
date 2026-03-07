@@ -1,0 +1,65 @@
+use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
+use datastore::store::Store;
+use datastore::store::traits::ProxyStoreTrait;
+
+fn main() {
+    // 1. Create a Store
+    let store = Store::new(Default::default());
+
+    // 2. Define an Object Structure
+    // An Object is a collection of named properties.
+    let mut user_def = ObjectDefinition::builder("User Profile");
+    user_def
+        .add(
+            "username",
+            PropertyDefinition::new("The user's unique name", BasicDefinition::new_string("")),
+        )
+        .unwrap();
+    user_def
+        .add(
+            "age",
+            PropertyDefinition::new("The user's age", BasicDefinition::new_number("0")),
+        )
+        .unwrap();
+
+    let def = user_def.finish();
+
+    // 3. Add an Object to the Store
+    // Objects are added at the top level with a unique key.
+    store.create_object(&"user_123".into(), &def).unwrap();
+
+    // 4. Access Data via Proxies
+    // Proxies provide a way to interact with data in the store.
+    let mut user_proxy = store.get_object(&"user_123".into()).unwrap();
+    let mut username_proxy = user_proxy.get_basic("username").unwrap();
+    let mut age_proxy = user_proxy.get_basic("age").unwrap();
+
+    // 5. Update Data
+    // Changes are made to the proxy first, then pushed to the store.
+    username_proxy.set_value("johndoe");
+    username_proxy.push().unwrap();
+
+    age_proxy.set_value("30");
+    age_proxy.push().unwrap();
+
+    // 6. Observe Changes
+    // If another handle to the same data exists, it can observe changes.
+    let mut observer_proxy = store.get_basic(&"user_123/username".into()).unwrap();
+
+    // We update the data via another proxy.
+    username_proxy.set_value("johndoe_updated");
+    username_proxy.push().unwrap();
+
+    // The store has changed, so has_changed() will return true.
+    assert!(observer_proxy.has_changed());
+
+    // Pull the latest data from the store.
+    observer_proxy.pull().unwrap();
+    assert_eq!(
+        observer_proxy.get_value().unwrap().as_str(),
+        "johndoe_updated"
+    );
+
+    println!("Username: {}", observer_proxy.get_value().unwrap());
+    println!("Age: {}", age_proxy.get_value().unwrap());
+}
