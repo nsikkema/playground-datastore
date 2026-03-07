@@ -76,8 +76,8 @@ pub enum StoreError {
     UndoNotAvailable,
     /// Redo operation is not available.
     RedoNotAvailable,
-    /// An IO error occurred.
-    IOError,
+    /// Failed to serialize or deserialize the store state.
+    SerializationError(String),
 }
 
 impl Display for StoreError {
@@ -98,7 +98,7 @@ impl Display for StoreError {
             StoreError::IndexNotFound => write!(f, "Index not found"),
             StoreError::UndoNotAvailable => write!(f, "Undo not available"),
             StoreError::RedoNotAvailable => write!(f, "Redo not available"),
-            StoreError::IOError => write!(f, "IO error"),
+            StoreError::SerializationError(s) => write!(f, "Serialization error: {}", s),
         }
     }
 }

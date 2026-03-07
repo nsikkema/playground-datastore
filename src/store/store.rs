@@ -7,9 +7,6 @@ use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, 
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
 use std::sync::Arc;
 
 /// Represents the internal state of the store for serialization.
@@ -318,8 +315,8 @@ impl Store {
         *self.internal.blake3_hash.read()
     }
 
-    /// Saves the store state to a file.
-    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), StoreError> {
+    /// Returns the store state as a JSON string.
+    pub fn to_json(&self) -> Result<String, StoreError> {
         let objects = self.internal.objects.read();
         let mut objects_state = HashMap::new();
         for (key, container) in objects.iter() {
@@ -333,20 +330,15 @@ impl Store {
             string_store: self.internal.string_store.clone(),
         };
 
-        let json = serde_json::to_string(&state).map_err(|_| StoreError::IOError)?;
-        let mut file = File::create(path).map_err(|_| StoreError::IOError)?;
-        file.write_all(json.as_bytes())
-            .map_err(|_| StoreError::IOError)?;
-        Ok(())
+        let json = serde_json::to_string(&state)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
+        Ok(json)
     }
 
-    /// Loads a store from a file.
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, StoreError> {
-        let mut file = File::open(path).map_err(|_| StoreError::IOError)?;
-        let mut json = String::new();
-        file.read_to_string(&mut json)
-            .map_err(|_| StoreError::IOError)?;
-        let state: StoreState = serde_json::from_str(&json).map_err(|_| StoreError::IOError)?;
+    /// Loads a store from a JSON string.
+    pub fn from_json(json: &str) -> Result<Self, StoreError> {
+        let state: StoreState = serde_json::from_str(json)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
 
         let mut objects = HashMap::new();
         let string_store = state.string_store;

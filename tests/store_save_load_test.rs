@@ -33,9 +33,8 @@ fn test_save_load_file() {
     let original_hash = store.get_blake3_hash();
 
     let temp_file = "test_store_save_load.json";
-    store
-        .save_to_file(temp_file)
-        .expect("Failed to save to file");
+    let json = store.to_json().expect("Failed to serialize store");
+    fs::write(temp_file, json).expect("Failed to write to file");
 
     // Verify JSON content doesn't have redundant definitions
     let json_content = fs::read_to_string(temp_file).unwrap();
@@ -53,7 +52,7 @@ fn test_save_load_file() {
         json_content
     );
 
-    let loaded_store = Store::load_from_file(temp_file).expect("Failed to load from file");
+    let loaded_store = Store::from_json(&json_content).expect("Failed to load from JSON");
 
     // Check data consistency
     let loaded_basic = loaded_store
@@ -223,10 +222,12 @@ fn test_save_load_comprehensive() {
 
     let original_hash = store.get_blake3_hash();
     let temp_file = "test_comprehensive_save_load.json";
-    store.save_to_file(temp_file).expect("Failed to save");
+    let json = store.to_json().expect("Failed to save");
+    fs::write(temp_file, json).expect("Failed to write");
 
     // 4. Load and Verify
-    let loaded_store = Store::load_from_file(temp_file).expect("Failed to load");
+    let json_content = fs::read_to_string(temp_file).expect("Failed to read");
+    let loaded_store = Store::from_json(&json_content).expect("Failed to load");
 
     let mut loaded_obj = loaded_store
         .get_object(&StorePath::builder(obj_key.clone()).build())
@@ -330,9 +331,8 @@ fn test_launder_consistency_after_load() {
     store.create_object(&obj_key, &def).unwrap();
 
     let temp_file = "test_launder.json";
-    store.save_to_file(temp_file).unwrap();
-
-    let loaded_store = Store::load_from_file(temp_file).unwrap();
+    let json = store.to_json().unwrap();
+    let loaded_store = Store::from_json(&json).unwrap();
 
     let s1 = ShareableString::from("hello");
     let s2 = ShareableString::from("hello");

@@ -71,11 +71,13 @@ fn main() {
     let store = Store::new(Default::default());
     // ... populate store ...
     
-    // Save to file
-    store.save_to_file("my_data.json").expect("Failed to save");
+    // Serialize to JSON
+    let json = store.to_json().expect("Failed to serialize");
+    std::fs::write("my_data.json", json).expect("Failed to write to file");
     
-    // Load from file
-    let loaded_store = Store::load_from_file("my_data.json").expect("Failed to load");
+    // Load from JSON
+    let loaded_json = std::fs::read_to_string("my_data.json").expect("Failed to read");
+    let loaded_store = Store::from_json(&loaded_json).expect("Failed to load");
 }
 ```
 
