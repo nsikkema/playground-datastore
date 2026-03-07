@@ -49,12 +49,8 @@ impl ProxyStoreTrait for ContainerProxy {
         }
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.object_hash.get() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.object_hash.get() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -62,7 +58,9 @@ impl ProxyStoreTrait for ContainerProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
         if !self.has_changed() {
             return Ok(());
         }
@@ -76,7 +74,10 @@ impl ProxyStoreTrait for ContainerProxy {
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+        
         Ok(())
     }
 

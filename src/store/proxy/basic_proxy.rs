@@ -50,12 +50,8 @@ impl ProxyStoreTrait for BasicProxy {
         self.get_definition().description()
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.data.current_blake3_hash() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.data.current_blake3_hash() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -63,7 +59,10 @@ impl ProxyStoreTrait for BasicProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         if !self.has_changed() {
             return Ok(());
         }
@@ -77,7 +76,10 @@ impl ProxyStoreTrait for BasicProxy {
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         self.store.set_basic(&self.path, &self.data)?;
         self.last_sync_hash = self.data.current_blake3_hash();
         Ok(())

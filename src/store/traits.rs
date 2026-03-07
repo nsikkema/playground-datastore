@@ -21,7 +21,7 @@ pub trait ProxyStoreTrait {
     /// Returns a description of the data.
     fn description(&self) -> ShareableString;
     /// Checks if the proxy is still valid.
-    fn is_valid(&self) -> Result<(), StoreError>;
+    fn is_valid(&self) -> bool;
     /// Returns true if the data has changed compared to the store.
     fn has_changed(&self) -> bool;
     /// Pulls the latest data from the store.

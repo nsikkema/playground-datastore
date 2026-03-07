@@ -180,13 +180,13 @@ fn test_proxy_deleted_object() {
     let obj_key = ShareableString::from("my_object");
     let mut obj_proxy = store.create_object(&obj_key, &obj_def).unwrap();
 
-    assert!(obj_proxy.is_valid().is_ok());
+    assert!(obj_proxy.is_valid());
 
     // 3. Delete Object from Store
     store.delete_object(&obj_key).unwrap();
 
     // 4. Verify Proxy is now invalid
-    assert!(obj_proxy.is_valid().is_err());
+    assert!(!obj_proxy.is_valid());
 
     // 5. Verify operations on invalid proxy fail
     assert!(obj_proxy.get_basic("name").is_err());
@@ -295,7 +295,7 @@ fn test_proxy_is_valid_initially() {
     let obj_key = ShareableString::from("valid_obj");
     let obj_proxy = store.create_object(&obj_key, &obj_def).unwrap();
 
-    assert!(obj_proxy.is_valid().is_ok());
+    assert!(obj_proxy.is_valid());
 }
 
 #[test]

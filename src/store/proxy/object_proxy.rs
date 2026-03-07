@@ -63,7 +63,10 @@ impl ObjectProxy {
         &mut self,
         key: S,
     ) -> Result<BasicProxy, StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+        
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
@@ -75,7 +78,10 @@ impl ObjectProxy {
         &mut self,
         key: S,
     ) -> Result<TableProxy, StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
@@ -87,7 +93,10 @@ impl ObjectProxy {
         &mut self,
         key: S,
     ) -> Result<ContainerProxy, StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
@@ -109,12 +118,8 @@ impl ProxyStoreTrait for ObjectProxy {
         self.definition.description()
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.object_hash.get() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.object_hash.get() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -122,7 +127,10 @@ impl ProxyStoreTrait for ObjectProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         if !self.has_changed() {
             return Ok(());
         }
