@@ -1,6 +1,60 @@
+//! # Datastore
+//!
+//! A hierarchical, thread-safe, and observable data store with proxy-based access.
+//!
+//! ## Core Concepts
+//!
+//! - **Store**: The root container for all data objects. It manages thread safety and persistence.
+//! - **Definitions**: Define the structure of your data (Objects, Structs, Maps, Tables, and Basic values).
+//! - **Proxies**: Lightweight handles to data within the store. They provide a way to read and update data while maintaining sync with the store.
+//! - **Paths**: Unique identifiers for every piece of data in the store. Use the `path!` macro for easy creation.
+//! - **Shareable Strings**: Interned, thread-safe strings used throughout the store to reduce memory overhead and enable fast comparisons.
+//!
+//! ## Thread Safety and Invariants
+//!
+//! - **Thread Safety**: The `Store` is thread-safe (`Send` + `Sync`) and uses internal locking (`parking_lot::RwLock`).
+//! - **Proxy Validity**: A proxy becomes "invalid" (expired) if its underlying data is removed from the store. Use `proxy.is_valid()` to check.
+//! - **Cloning**: Cloning a `Store` or a `Proxy` creates a new handle to the *same* underlying data (shallow copy).
+//! - **Change Tracking**: Use `has_changed()` on a proxy to check if the store has been updated since the proxy was last synced.
+//! - **Updates**: Updates via proxies are pushed to the store. Other proxies must `pull()` to see these changes.
+//!
+//! ## Example
+//!
+//! ```rust
+//! use datastore::store::{Store, StorePath};
+//! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
+//! use datastore::store::traits::ProxyStoreTrait;
+//! use datastore::path;
+//!
+//! // 1. Define your data structure
+//! let mut builder = ObjectDefinition::builder("My Object");
+//! builder.add("name".into(), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
+//! let def = builder.finish();
+//!
+//! // 2. Create a store and add an object
+//! let store = Store::new(Default::default());
+//! store.create_object("user_1".into(), &def).unwrap();
+//!
+//! // 3. Access data via a proxy
+//! let mut user_proxy = store.object(&"user_1".into()).unwrap();
+//! let mut name_proxy = user_proxy.basic("name").unwrap();
+//!
+//! name_proxy.set_value("Alice");
+//! name_proxy.push().unwrap();
+//!
+//! assert_eq!(name_proxy.value().unwrap().as_str(), "Alice");
+//!
+//! // You can also access data directly via paths
+//! let mut name_proxy_direct = store.basic(&path!("user_1" / "name")).unwrap();
+//! assert_eq!(name_proxy_direct.value().unwrap().as_str(), "Alice");
+//! ```
+
 pub mod definition;
+pub mod key;
 pub mod shareable_string;
 pub mod store;
+
+pub use crate::key::StoreKey;
 
 use crate::shareable_string::ShareableString;
 use std::fmt::{Display, Formatter};
@@ -24,14 +78,16 @@ pub enum StoreError {
     KeyNotFound,
     /// The provided path is invalid.
     InvalidPath,
+    /// The provided path segment is invalid.
+    InvalidPathSegment(String),
     /// The requested index was not found.
     IndexNotFound,
     /// Undo operation is not available.
     UndoNotAvailable,
     /// Redo operation is not available.
     RedoNotAvailable,
-    /// An IO error occurred.
-    IOError,
+    /// Failed to serialize or deserialize the store state.
+    SerializationError(String),
 }
 
 impl Display for StoreError {
@@ -49,27 +105,13 @@ impl Display for StoreError {
             StoreError::ExpiredProxy => write!(f, "Proxy is invalid"),
             StoreError::KeyNotFound => write!(f, "Key not found"),
             StoreError::InvalidPath => write!(f, "Invalid path"),
+            StoreError::InvalidPathSegment(s) => write!(f, "Invalid path segment: {}", s),
             StoreError::IndexNotFound => write!(f, "Index not found"),
             StoreError::UndoNotAvailable => write!(f, "Undo not available"),
             StoreError::RedoNotAvailable => write!(f, "Redo not available"),
-            StoreError::IOError => write!(f, "IO error"),
+            StoreError::SerializationError(s) => write!(f, "Serialization error: {}", s),
         }
     }
 }
 
 impl std::error::Error for StoreError {}
-
-/// Validates that a key is not empty and only contains valid characters.
-/// Valid characters are lowercase a-z, digits 0-9, and underscores.
-pub(crate) fn validate_key(key: &ShareableString) -> Result<(), StoreError> {
-    let s = key.as_str();
-    if s.is_empty() {
-        return Err(StoreError::KeyEmpty);
-    }
-    for c in s.chars() {
-        if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '_' {
-            return Err(StoreError::KeyInvalidCharacter(s.to_string()));
-        }
-    }
-    Ok(())
-}

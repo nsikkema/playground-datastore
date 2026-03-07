@@ -27,7 +27,7 @@ impl TableProxy {
     }
 
     /// Returns a reference to the table definition.
-    pub fn get_definition(&self) -> &TableDefinition {
+    pub fn definition(&self) -> &TableDefinition {
         self.data.definition()
     }
 
@@ -62,32 +62,30 @@ impl TableProxy {
     }
 
     /// Sets the value of a cell in the table.
-    pub fn set_cell(
+    pub fn set_cell<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         &mut self,
         row_index: usize,
-        column_key: &str,
-        value: ShareableString,
+        column_key: S1,
+        value: S2,
     ) -> Result<(), StoreError> {
-        let new_value = self.store.launder(value);
-        self.data.set_cell(row_index, column_key, new_value)
+        let column_key = column_key.into();
+        let new_value = self.store.launder(value.into());
+        self.data
+            .set_cell(row_index, column_key.as_str(), new_value)
     }
 }
 
 impl ProxyStoreTrait for TableProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
     fn description(&self) -> ShareableString {
-        self.get_definition().description()
+        self.definition().description()
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.data.current_blake3_hash() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.data.current_blake3_hash() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -95,12 +93,15 @@ impl ProxyStoreTrait for TableProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         if !self.has_changed() {
             return Ok(());
         }
 
-        let proxy = self.store.get_table(&self.path)?;
+        let proxy = self.store.table(&self.path)?;
 
         self.data = proxy.data;
         self.last_sync_hash = proxy.last_sync_hash;
@@ -109,14 +110,17 @@ impl ProxyStoreTrait for TableProxy {
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         self.store.set_table(&self.path, &self.data)?;
         self.last_sync_hash = self.data.current_blake3_hash();
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
         let path = self.path.clone().get_object();
-        self.store.get_object(&path)
+        self.store.object(&path)
     }
 }

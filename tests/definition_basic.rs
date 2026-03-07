@@ -1,3 +1,4 @@
+use datastore::StoreKey;
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
@@ -54,14 +55,19 @@ fn test_basic_definition_choice() {
 
 #[test]
 fn test_table_definition() {
-    let table_def_res = TableDefinition::new(
+    let table_def = TableDefinition::new(
         "A table",
         vec![
-            ("col1", BasicDefinition::new_string("Column 1")),
-            ("col2", BasicDefinition::new_number("Column 2")),
+            (
+                "col1".try_into().unwrap(),
+                BasicDefinition::new_string("Column 1"),
+            ),
+            (
+                "col2".try_into().unwrap(),
+                BasicDefinition::new_number("Column 2"),
+            ),
         ],
     );
-    let table_def = table_def_res.expect("Valid keys");
 
     assert_eq!(table_def.description().as_ref(), "A table");
     assert_eq!(table_def.count(), 2);
@@ -75,23 +81,22 @@ fn test_table_definition() {
 
 #[test]
 fn test_struct_definition() {
-    let struct_def_res = StructDefinition::new(
+    let struct_def = StructDefinition::new(
         "A struct",
         vec![
             (
-                "field1",
+                "field1".try_into().unwrap(),
                 StructItemDefinition::Basic(BasicDefinition::new_string("Field 1")),
             ),
             (
-                "field2",
-                StructItemDefinition::Table(
-                    TableDefinition::new("Table field", Vec::<(String, BasicDefinition)>::new())
-                        .expect("Valid keys"),
-                ),
+                "field2".try_into().unwrap(),
+                StructItemDefinition::Table(TableDefinition::new(
+                    "Table field",
+                    Vec::<(StoreKey, BasicDefinition)>::new(),
+                )),
             ),
         ],
     );
-    let struct_def = struct_def_res.expect("Valid keys");
 
     assert_eq!(struct_def.description().as_ref(), "A struct");
     assert_eq!(struct_def.count(), 2);
@@ -106,9 +111,10 @@ fn test_struct_definition() {
 
 #[test]
 fn test_map_definition() {
-    let struct_def =
-        StructDefinition::new("Item struct", Vec::<(String, StructItemDefinition)>::new())
-            .expect("Valid keys");
+    let struct_def = StructDefinition::new(
+        "Item struct",
+        Vec::<(StoreKey, StructItemDefinition)>::new(),
+    );
     let map_def = MapDefinition::new("A map", struct_def.clone());
 
     assert_eq!(map_def.description().as_ref(), "A map");
@@ -124,16 +130,15 @@ fn test_property_definition() {
         datastore::definition::PropertyDefinitionType::Basic(_)
     ));
 
-    let struct_def = StructDefinition::new("Struct", Vec::<(String, StructItemDefinition)>::new())
-        .expect("Valid keys");
+    let struct_def =
+        StructDefinition::new("Struct", Vec::<(StoreKey, StructItemDefinition)>::new());
     let struct_prop = PropertyDefinition::new("Struct Prop", struct_def);
     assert!(matches!(
         struct_prop.item_type(),
         datastore::definition::PropertyDefinitionType::Struct(_)
     ));
 
-    let table_def =
-        TableDefinition::new("Table", Vec::<(String, BasicDefinition)>::new()).expect("Valid keys");
+    let table_def = TableDefinition::new("Table", Vec::<(StoreKey, BasicDefinition)>::new());
     let table_prop = PropertyDefinition::new("Table Prop", table_def);
     assert!(matches!(
         table_prop.item_type(),
@@ -142,8 +147,7 @@ fn test_property_definition() {
 
     let map_def = MapDefinition::new(
         "Map",
-        StructDefinition::new("Item", Vec::<(String, StructItemDefinition)>::new())
-            .expect("Valid keys"),
+        StructDefinition::new("Item", Vec::<(StoreKey, StructItemDefinition)>::new()),
     );
     let map_prop = PropertyDefinition::new("Map Prop", map_def);
     assert!(matches!(
@@ -155,12 +159,10 @@ fn test_property_definition() {
 #[test]
 fn test_object_definition_basic() {
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder
-        .add(
-            "prop1",
-            PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
-        )
-        .expect("Valid key");
+    builder.add(
+        "prop1".try_into().unwrap(),
+        PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
+    );
     let obj_def = builder.finish();
 
     assert_eq!(obj_def.description().as_ref(), "Test Object");

@@ -1,16 +1,13 @@
-use crate::StoreError;
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
 use crate::store::traits::CommonStoreTraitInternal;
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
+use crate::{StoreError, StoreKey};
+use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::fs::File;
-use std::io::{Read, Write};
-use std::path::Path;
 use std::sync::Arc;
-use std::sync::RwLock;
 
 /// Represents the internal state of the store for serialization.
 #[derive(Debug, Serialize, Deserialize)]
@@ -30,10 +27,10 @@ pub(crate) struct StoreInternal {
 
 impl StoreInternal {
     /// Creates a new `StoreInternal`.
-    fn new() -> Self {
+    fn new(string_store: SharedStringStore) -> Self {
         let store = StoreInternal {
             objects: HashMap::new().into(),
-            string_store: SharedStringStore::new(),
+            string_store,
             blake3_hash: [0u8; 32].into(),
         };
         store.update_blake3_hash_locked();
@@ -42,7 +39,7 @@ impl StoreInternal {
 
     /// Updates the BLAKE3 hash while holding the lock.
     fn update_blake3_hash_locked(&self) {
-        let objects = self.objects.read().unwrap();
+        let objects = self.objects.read();
         self.update_blake3_hash(&objects);
     }
 
@@ -66,7 +63,7 @@ impl StoreInternal {
         }
 
         let digest = h.finalize();
-        let mut writer = self.blake3_hash.write().expect("Merkle hash lock failed");
+        let mut writer = self.blake3_hash.write();
         *writer = *digest.as_bytes();
     }
 
@@ -76,10 +73,7 @@ impl StoreInternal {
         object_key: &ShareableString,
         definition: &ObjectDefinition,
     ) -> Result<(), StoreError> {
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         if writer.contains_key(object_key) {
             return Err(StoreError::ObjectKeyAlreadyExists);
@@ -98,10 +92,7 @@ impl StoreInternal {
 
     /// Deletes an object from the store.
     pub(crate) fn delete_object(&self, object_key: &ShareableString) -> Result<(), StoreError> {
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         let mut object = writer
             .remove(object_key)
@@ -121,10 +112,7 @@ impl StoreInternal {
         container: &Container,
     ) -> Result<(), StoreError> {
         let laundered_container = container.launder(&self.string_store);
-        let mut writer = self
-            .objects
-            .write()
-            .expect("Lock acquisition failed objects hash map");
+        let mut writer = self.objects.write();
 
         if writer.contains_key(object_key) {
             return Err(StoreError::ObjectKeyAlreadyExists);
@@ -139,10 +127,7 @@ impl StoreInternal {
 
     /// Returns a copy of the container for the specified object key.
     pub(crate) fn get_object(&self, object_key: &ShareableString) -> Result<Container, StoreError> {
-        let reader = self
-            .objects
-            .read()
-            .expect("Lock acquisition failed objects hash map");
+        let reader = self.objects.read();
 
         reader
             .get(object_key)
@@ -159,26 +144,28 @@ pub struct Store {
 
 impl Store {
     /// Creates a new, empty `Store`.
-    pub fn new() -> Self {
+    pub fn new(string_store: SharedStringStore) -> Self {
         Self {
-            internal: Arc::new(StoreInternal::new()),
+            internal: Arc::new(StoreInternal::new(string_store)),
         }
     }
 
     /// Creates a new object in the store and returns a proxy to it.
     pub fn create_object(
         &self,
-        object_key: &ShareableString,
+        object_key: StoreKey,
         definition: &ObjectDefinition,
     ) -> Result<ObjectProxy, StoreError> {
-        self.internal.create_object(object_key, definition)?;
-        let path = StorePath::builder(object_key.clone()).build();
-        self.get_object(&path)
+        let object_key = object_key.key;
+        let object_key = self.launder(object_key);
+        self.internal.create_object(&object_key, definition)?;
+        let path = StorePath::builder(object_key).build();
+        self.object(&path)
     }
 
     /// Returns an `ObjectProxy` for the specified path.
-    pub fn get_object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
-        let object_key = store_path.get_object_key();
+    pub fn object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
+        let object_key = store_path.object_key();
         let container = self.internal.get_object(object_key)?;
         if let ContainerDefinition::Object(definition) = container.definition() {
             let keys = container.keys();
@@ -202,10 +189,10 @@ impl Store {
         &self,
         store_path: &StorePath,
     ) -> Result<Container, StoreError> {
-        let object_key = store_path.get_object_key();
+        let object_key = store_path.object_key();
         let mut current_container = self.internal.get_object(object_key)?;
 
-        for segment in store_path.get_segments() {
+        for segment in store_path.segments() {
             match segment {
                 Segment::Property(key) | Segment::MapKey(key) | Segment::StructItem(key) => {
                     match current_container.get_item(key)? {
@@ -219,7 +206,7 @@ impl Store {
     }
 
     /// Returns a `ContainerProxy` for the specified path.
-    pub fn get_container(&self, store_path: &StorePath) -> Result<ContainerProxy, StoreError> {
+    pub fn container(&self, store_path: &StorePath) -> Result<ContainerProxy, StoreError> {
         let container = self.get_container_internal(store_path)?;
         let keys = container.keys();
         let object_hash = container.hash_container().clone();
@@ -236,8 +223,8 @@ impl Store {
     }
 
     /// Returns a `TableProxy` for the specified path.
-    pub fn get_table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
-        let segments = store_path.get_segments();
+    pub fn table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
+        let segments = store_path.segments();
         if segments.is_empty() {
             return Err(StoreError::InvalidPath);
         }
@@ -262,8 +249,8 @@ impl Store {
     }
 
     /// Returns a `BasicProxy` for the specified path.
-    pub fn get_basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
-        let segments = store_path.get_segments();
+    pub fn basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
+        let segments = store_path.segments();
         if segments.is_empty() {
             return Err(StoreError::InvalidPath);
         }
@@ -294,13 +281,13 @@ impl Store {
         mut container: Container,
     ) -> Result<(), StoreError> {
         container.update_blake3_hash();
-        let segments = path.get_segments();
+        let segments = path.segments();
 
         if segments.is_empty() {
             // Updating a top-level object
             {
-                let mut writer = self.internal.objects.write().unwrap();
-                writer.insert(path.get_object_key().clone(), container);
+                let mut writer = self.internal.objects.write();
+                writer.insert(path.object_key().clone(), container);
                 self.internal.update_blake3_hash(&writer);
             }
             return Ok(());
@@ -315,36 +302,25 @@ impl Store {
     }
 
     /// Deletes the object with the specified key.
-    pub fn delete_object(&self, object_key: &ShareableString) -> Result<(), StoreError> {
-        self.internal.delete_object(object_key)
+    pub fn delete_object<K: Into<StoreKey>>(&self, object_key: K) -> Result<(), StoreError> {
+        let object_key = object_key.into().key;
+        self.internal.delete_object(&object_key)
     }
 
     /// Returns a list of all object keys in the store.
-    pub fn get_object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
-        let reader = self
-            .internal
-            .objects
-            .read()
-            .expect("Lock acquisition failed objects hash map");
+    pub fn object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+        let reader = self.internal.objects.read();
         Ok(reader.keys().cloned().collect())
     }
 
     /// Returns the overall BLAKE3 hash of the store.
     pub fn get_blake3_hash(&self) -> [u8; 32] {
-        *self
-            .internal
-            .blake3_hash
-            .read()
-            .expect("Lock acquisition failed")
+        *self.internal.blake3_hash.read()
     }
 
-    /// Saves the store state to a file.
-    pub fn save_to_file<P: AsRef<Path>>(&self, path: P) -> Result<(), StoreError> {
-        let objects = self
-            .internal
-            .objects
-            .read()
-            .expect("Lock acquisition failed");
+    /// Returns the store state as a JSON string.
+    pub fn to_json(&self) -> Result<String, StoreError> {
+        let objects = self.internal.objects.read();
         let mut objects_state = HashMap::new();
         for (key, container) in objects.iter() {
             if let ContainerDefinition::Object(def) = container.definition() {
@@ -357,20 +333,15 @@ impl Store {
             string_store: self.internal.string_store.clone(),
         };
 
-        let json = serde_json::to_string(&state).map_err(|_| StoreError::IOError)?;
-        let mut file = File::create(path).map_err(|_| StoreError::IOError)?;
-        file.write_all(json.as_bytes())
-            .map_err(|_| StoreError::IOError)?;
-        Ok(())
+        let json = serde_json::to_string(&state)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
+        Ok(json)
     }
 
-    /// Loads a store from a file.
-    pub fn load_from_file<P: AsRef<Path>>(path: P) -> Result<Self, StoreError> {
-        let mut file = File::open(path).map_err(|_| StoreError::IOError)?;
-        let mut json = String::new();
-        file.read_to_string(&mut json)
-            .map_err(|_| StoreError::IOError)?;
-        let state: StoreState = serde_json::from_str(&json).map_err(|_| StoreError::IOError)?;
+    /// Loads a store from a JSON string.
+    pub fn from_json(json: &str) -> Result<Self, StoreError> {
+        let state: StoreState = serde_json::from_str(json)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
 
         let mut objects = HashMap::new();
         let string_store = state.string_store;
@@ -400,24 +371,28 @@ impl Store {
     }
 
     /// Copies an object from another store.
-    pub fn copy_object(
+    pub fn copy_object<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         &self,
-        object_key: &ShareableString,
+        object_key: S1,
         source_store: &Store,
-        source_object_key: &ShareableString,
+        source_object_key: S2,
     ) -> Result<ObjectProxy, StoreError> {
-        let container = source_store.internal.get_object(source_object_key)?;
-        self.internal.add_object(object_key, &container)?;
-        let path = StorePath::builder(object_key.clone()).build();
-        self.get_object(&path)
+        let object_key = self.launder(object_key.into());
+        let source_object_key = source_object_key.into();
+        let container = source_store.internal.get_object(&source_object_key)?;
+        let container = container.launder(&self.internal.string_store);
+
+        self.internal.add_object(&object_key, &container)?;
+        let path = StorePath::builder(object_key).build();
+        self.object(&path)
     }
 }
 
 /// Splits a path into its parent path and the last segment.
 fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
-    let mut segments = path.get_segments().clone();
+    let mut segments = path.segments().clone();
     let last_segment = segments.pop().ok_or(StoreError::InvalidPath)?;
-    let mut parent_path = StorePath::builder(path.get_object_key().clone()).build();
+    let mut parent_path = StorePath::builder(path.object_key().clone()).build();
     for segment in segments {
         match segment {
             Segment::Property(key) => {

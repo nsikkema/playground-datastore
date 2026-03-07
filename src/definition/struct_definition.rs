@@ -1,6 +1,6 @@
+use crate::StoreKey;
 use crate::definition::{BasicDefinition, TableDefinition};
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::{StoreError, validate_key};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -51,24 +51,19 @@ impl Default for StructItemDefinition {
 
 impl StructDefinition {
     /// Creates a new `StructDefinition` with a description and a list of items.
-    pub fn new<
-        S1: Into<ShareableString>,
-        S2: Into<ShareableString>,
-        I: Into<StructItemDefinition>,
-    >(
+    pub fn new<S1: Into<ShareableString>, I: Into<StructItemDefinition>>(
         description: S1,
-        item_type: Vec<(S2, I)>,
-    ) -> Result<Self, StoreError> {
+        item_type: Vec<(StoreKey, I)>,
+    ) -> Self {
         let mut items = BTreeMap::new();
         for (k, v) in item_type {
-            let key = k.into();
-            validate_key(&key)?;
+            let key = k.key;
             items.insert(key, v.into());
         }
-        Ok(Self {
+        Self {
             description: description.into(),
             item_type: Arc::new(items),
-        })
+        }
     }
 
     /// Returns the description of the struct.

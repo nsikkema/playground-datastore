@@ -41,15 +41,13 @@ impl ObjectProxy {
     }
 
     /// Returns the keys of the properties in the object.
-    pub fn get_keys(&self) -> &Vec<ShareableString> {
+    pub fn keys(&self) -> &Vec<ShareableString> {
         &self.keys
     }
 
     /// Checks if a property with the given key exists in the object.
-    pub fn check_key<S: Into<ShareableString> + AsRef<str>>(
-        &self,
-        key: S,
-    ) -> Result<bool, StoreError> {
+    pub fn check_key<S: Into<ShareableString>>(&self, key: S) -> Result<bool, StoreError> {
+        let key = key.into();
         Ok(self.keys.iter().any(|k| k.as_ref() == key.as_ref()))
     }
 
@@ -59,49 +57,52 @@ impl ObjectProxy {
     }
 
     /// Returns a `BasicProxy` for the property with the given key.
-    pub fn get_basic<S: Into<ShareableString> + AsRef<str>>(
-        &mut self,
-        key: S,
-    ) -> Result<BasicProxy, StoreError> {
-        self.is_valid()?;
+    pub fn basic<S: Into<ShareableString>>(&mut self, key: S) -> Result<BasicProxy, StoreError> {
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_basic(&path)
+        self.store.basic(&path)
     }
 
     /// Returns a `TableProxy` for the property with the given key.
-    pub fn get_table<S: Into<ShareableString> + AsRef<str>>(
-        &mut self,
-        key: S,
-    ) -> Result<TableProxy, StoreError> {
-        self.is_valid()?;
+    pub fn table<S: Into<ShareableString>>(&mut self, key: S) -> Result<TableProxy, StoreError> {
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_table(&path)
+        self.store.table(&path)
     }
 
     /// Returns a `ContainerProxy` for the property with the given key.
-    pub fn get_container<S: Into<ShareableString> + AsRef<str>>(
+    pub fn container<S: Into<ShareableString>>(
         &mut self,
         key: S,
     ) -> Result<ContainerProxy, StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         let key = key.into();
         self.check_key(&key)?;
         let path = self.path.clone().to_builder().property(key).build()?;
-        self.store.get_container(&path)
+        self.store.container(&path)
     }
 
     /// Returns all property keys in the object.
-    pub fn get_all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+    pub fn all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
         Ok(self.keys.clone())
     }
 }
 
 impl ProxyStoreTrait for ObjectProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
@@ -109,12 +110,8 @@ impl ProxyStoreTrait for ObjectProxy {
         self.definition.description()
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.object_hash.get() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.object_hash.get() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -122,12 +119,15 @@ impl ProxyStoreTrait for ObjectProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         if !self.has_changed() {
             return Ok(());
         }
 
-        let proxy = self.store.get_object(&self.path)?;
+        let proxy = self.store.object(&self.path)?;
         self.keys = proxy.keys;
         self.last_sync_hash = proxy.last_sync_hash;
 
@@ -138,7 +138,7 @@ impl ProxyStoreTrait for ObjectProxy {
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
-        self.store.get_object(&self.path)
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
+        self.store.object(&self.path)
     }
 }

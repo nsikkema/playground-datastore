@@ -25,37 +25,33 @@ impl BasicProxy {
     }
 
     /// Returns a reference to the basic definition.
-    pub fn get_definition(&self) -> &BasicDefinition {
+    pub fn definition(&self) -> &BasicDefinition {
         &self.data.definition()
     }
 
     /// Returns the current value from the proxy.
-    pub fn get_value(&self) -> Result<ShareableString, StoreError> {
+    pub fn value(&self) -> Result<ShareableString, StoreError> {
         Ok(self.data.get())
     }
 
     /// Sets a new value in the proxy.
-    pub fn set_value<S: Into<ShareableString> + AsRef<str>>(&mut self, value: S) {
+    pub fn set_value<S: Into<ShareableString>>(&mut self, value: S) {
         let new_value = self.store.launder(value.into());
         self.data.set(new_value);
     }
 }
 
 impl ProxyStoreTrait for BasicProxy {
-    fn get_path(&self) -> &StorePath {
+    fn path(&self) -> &StorePath {
         &self.path
     }
 
     fn description(&self) -> ShareableString {
-        self.get_definition().description()
+        self.definition().description()
     }
 
-    fn is_valid(&self) -> Result<(), StoreError> {
-        if self.data.current_blake3_hash() != [0u8; 32] {
-            return Ok(());
-        }
-
-        Err(StoreError::ExpiredProxy)
+    fn is_valid(&self) -> bool {
+        self.data.current_blake3_hash() != [0u8; 32]
     }
 
     fn has_changed(&self) -> bool {
@@ -63,12 +59,15 @@ impl ProxyStoreTrait for BasicProxy {
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         if !self.has_changed() {
             return Ok(());
         }
 
-        let proxy = self.store.get_basic(&self.path)?;
+        let proxy = self.store.basic(&self.path)?;
 
         self.data = proxy.data;
         self.last_sync_hash = proxy.last_sync_hash;
@@ -77,14 +76,17 @@ impl ProxyStoreTrait for BasicProxy {
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
-        self.is_valid()?;
+        if !self.is_valid() {
+            return Err(StoreError::ExpiredProxy);
+        }
+
         self.store.set_basic(&self.path, &self.data)?;
         self.last_sync_hash = self.data.current_blake3_hash();
         Ok(())
     }
 
-    fn get_object(&self) -> Result<ObjectProxy, StoreError> {
+    fn object(&self) -> Result<ObjectProxy, StoreError> {
         let path = self.path.clone().get_object();
-        self.store.get_object(&path)
+        self.store.object(&path)
     }
 }
