@@ -1,9 +1,9 @@
-use crate::StoreError;
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
 use crate::store::traits::CommonStoreTraitInternal;
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
+use crate::{StoreError, StoreKey};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -151,12 +151,13 @@ impl Store {
     }
 
     /// Creates a new object in the store and returns a proxy to it.
-    pub fn create_object<S: Into<ShareableString>>(
+    pub fn create_object(
         &self,
-        object_key: S,
+        object_key: StoreKey,
         definition: &ObjectDefinition,
     ) -> Result<ObjectProxy, StoreError> {
-        let object_key = self.launder(object_key.into());
+        let object_key = object_key.key;
+        let object_key = self.launder(object_key);
         self.internal.create_object(&object_key, definition)?;
         let path = StorePath::builder(object_key).build();
         self.object(&path)
@@ -301,8 +302,9 @@ impl Store {
     }
 
     /// Deletes the object with the specified key.
-    pub fn delete_object<S: Into<ShareableString>>(&self, object_key: S) -> Result<(), StoreError> {
-        self.internal.delete_object(&object_key.into())
+    pub fn delete_object<K: Into<StoreKey>>(&self, object_key: K) -> Result<(), StoreError> {
+        let object_key = object_key.into().key;
+        self.internal.delete_object(&object_key)
     }
 
     /// Returns a list of all object keys in the store.

@@ -1,3 +1,4 @@
+use datastore::StoreKey;
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, PropertyDefinitionType, StructDefinition,
@@ -34,11 +35,16 @@ fn test_table_definition_comprehensive() {
     let table_def = TableDefinition::new(
         "Table Desc",
         vec![
-            ("col1", BasicDefinition::new_string("C1")),
-            ("col2", BasicDefinition::new_number("C2")),
+            (
+                "col1".try_into().unwrap(),
+                BasicDefinition::new_string("C1"),
+            ),
+            (
+                "col2".try_into().unwrap(),
+                BasicDefinition::new_number("C2"),
+            ),
         ],
-    )
-    .expect("Valid keys");
+    );
 
     assert_eq!(table_def.description_ref().as_ref(), "Table Desc");
     assert_eq!(table_def.count(), 2);
@@ -60,26 +66,28 @@ fn test_struct_definition_comprehensive() {
         "Struct Desc",
         vec![
             (
-                "f1",
+                "f1".try_into().unwrap(),
                 StructItemDefinition::Basic(BasicDefinition::new_string("F1")),
             ),
             (
-                "f2",
-                StructItemDefinition::Table(
-                    TableDefinition::new("T1", Vec::<(&str, BasicDefinition)>::new())
-                        .expect("Valid keys"),
-                ),
+                "f2".try_into().unwrap(),
+                StructItemDefinition::Table(TableDefinition::new(
+                    "T1",
+                    Vec::<(StoreKey, BasicDefinition)>::new(),
+                )),
             ),
         ],
-    )
-    .expect("Valid keys");
+    );
 
     assert_eq!(struct_def.description_ref().as_ref(), "Struct Desc");
     assert_eq!(struct_def.count(), 2);
     assert!(struct_def.contains_key_str("f1"));
     assert!(struct_def.get_str("f2").is_some());
 
-    let keys: Vec<String> = struct_def.keys().map(|k| k.as_ref().to_string()).collect();
+    let keys: Vec<String> = struct_def
+        .keys()
+        .map(|k: &datastore::shareable_string::ShareableString| k.as_ref().to_string())
+        .collect();
     assert!(keys.contains(&"f1".to_string()));
     assert!(keys.contains(&"f2".to_string()));
 
@@ -89,8 +97,7 @@ fn test_struct_definition_comprehensive() {
 
 #[test]
 fn test_map_definition_comprehensive() {
-    let struct_def = StructDefinition::new("Item", Vec::<(&str, StructItemDefinition)>::new())
-        .expect("Valid keys");
+    let struct_def = StructDefinition::new("Item", Vec::<(StoreKey, StructItemDefinition)>::new());
     let map_def = MapDefinition::new("Map Desc", struct_def);
     assert_eq!(map_def.description_ref().as_ref(), "Map Desc");
 }
@@ -110,15 +117,13 @@ fn test_property_definition_comprehensive() {
 fn test_object_definition_comprehensive() {
     let obj_def = ObjectDefinition::builder("Obj Desc")
         .with(
-            "p1",
+            "p1".try_into().unwrap(),
             PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
         )
-        .expect("Valid key")
         .with(
-            "p2",
+            "p2".try_into().unwrap(),
             PropertyDefinition::new("P2", BasicDefinition::new_number("D2")),
         )
-        .expect("Valid key")
         .finish();
 
     assert_eq!(obj_def.description_ref().as_ref(), "Obj Desc");
@@ -144,8 +149,10 @@ fn test_launder_comprehensive() {
     assert_eq!(laundered_basic.description(), basic_def.description());
 
     // Test TableDefinition launder
-    let table_def = TableDefinition::new("Table", vec![("col", BasicDefinition::new_string("C"))])
-        .expect("Valid keys");
+    let table_def = TableDefinition::new(
+        "Table",
+        vec![("col".try_into().unwrap(), BasicDefinition::new_string("C"))],
+    );
     let laundered_table = table_def.launder(&store);
     assert_eq!(laundered_table.description(), table_def.description());
     assert!(laundered_table.contains_key("col"));
@@ -154,11 +161,10 @@ fn test_launder_comprehensive() {
     let struct_def = StructDefinition::new(
         "Struct",
         vec![(
-            "field",
+            "field".try_into().unwrap(),
             StructItemDefinition::from(BasicDefinition::new_string("F")),
         )],
-    )
-    .expect("Valid keys");
+    );
     let laundered_struct = struct_def.launder(&store);
     assert_eq!(laundered_struct.description(), struct_def.description());
     assert!(laundered_struct.contains_key("field"));
@@ -175,8 +181,7 @@ fn test_launder_comprehensive() {
 
     // Test ObjectDefinition launder
     let obj_def = ObjectDefinition::builder("Obj")
-        .with("prop", prop_def)
-        .expect("Valid key")
+        .with("prop".try_into().unwrap(), prop_def)
         .finish();
     let laundered_obj = obj_def.launder(&store);
     assert_eq!(laundered_obj.description(), obj_def.description());

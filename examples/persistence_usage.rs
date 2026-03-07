@@ -8,15 +8,15 @@ fn main() {
     // 1. Create a Store and Populate it
     let store = Store::new(Default::default());
     let mut builder = ObjectDefinition::builder("Settings Object");
-    builder
-        .add(
-            "theme",
-            PropertyDefinition::new("App theme", BasicDefinition::new_string("light")),
-        )
-        .unwrap();
+    builder.add(
+        "theme".try_into().unwrap(),
+        PropertyDefinition::new("App theme", BasicDefinition::new_string("light")),
+    );
     let def = builder.finish();
 
-    store.create_object("app_settings", &def).unwrap();
+    store
+        .create_object("app_settings".try_into().unwrap(), &def)
+        .unwrap();
 
     // 2. Save the Store to a File
     // This will serialize the entire store state (objects, definitions, and shared strings).

@@ -16,16 +16,15 @@ fn main() {
         "Address",
         vec![
             (
-                "street",
+                "street".try_into().unwrap(),
                 StructItemDefinition::Basic(BasicDefinition::new_string("")),
             ),
             (
-                "city",
+                "city".try_into().unwrap(),
                 StructItemDefinition::Basic(BasicDefinition::new_string("")),
             ),
         ],
-    )
-    .unwrap();
+    );
 
     // 3. Define a Map
     // A Map stores multiple instances of a Struct, keyed by strings.
@@ -36,35 +35,36 @@ fn main() {
     let inventory_def = TableDefinition::new(
         "Inventory",
         vec![
-            ("item_id", BasicDefinition::new_string("")),
-            ("quantity", BasicDefinition::new_number("0")),
+            (
+                "item_id".try_into().unwrap(),
+                BasicDefinition::new_string(""),
+            ),
+            (
+                "quantity".try_into().unwrap(),
+                BasicDefinition::new_number("0"),
+            ),
         ],
-    )
-    .unwrap();
+    );
 
     // 5. Create an Object with these components
     let mut builder = ObjectDefinition::builder("Company Data");
-    builder
-        .add(
-            "hq_address",
-            PropertyDefinition::new("Headquarters", address_def),
-        )
-        .unwrap();
-    builder
-        .add(
-            "branches",
-            PropertyDefinition::new("Branch Offices", contacts_def),
-        )
-        .unwrap();
-    builder
-        .add(
-            "stock",
-            PropertyDefinition::new("Warehouse Stock", inventory_def),
-        )
-        .unwrap();
+    builder.add(
+        "hq_address".try_into().unwrap(),
+        PropertyDefinition::new("Headquarters", address_def),
+    );
+    builder.add(
+        "branches".try_into().unwrap(),
+        PropertyDefinition::new("Branch Offices", contacts_def),
+    );
+    builder.add(
+        "stock".try_into().unwrap(),
+        PropertyDefinition::new("Warehouse Stock", inventory_def),
+    );
     let company_def = builder.finish();
 
-    store.create_object("my_company", &company_def).unwrap();
+    store
+        .create_object("my_company".try_into().unwrap(), &company_def)
+        .unwrap();
 
     let mut company_proxy = store.object(&"my_company".into()).unwrap();
     let company_key = "my_company";

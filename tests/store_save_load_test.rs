@@ -10,19 +10,16 @@ use std::fs;
 #[test]
 fn test_save_load_file() {
     let store = Store::new(SharedStringStore::new());
-    let obj_key = ShareableString::from("my_object");
+    let obj_key: datastore::StoreKey = "my_object".into();
     let def = ObjectDefinition::builder("My Test Object")
         .with(
-            "prop1",
+            "prop1".try_into().unwrap(),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("A string")),
         )
-        .unwrap()
         .finish();
 
-    let _proxy = store.create_object(&obj_key, &def).unwrap();
-    let prop_path = StorePath::builder(obj_key.clone())
-        .property("prop1")
-        .build();
+    let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
+    let prop_path = StorePath::builder(obj_key).property("prop1").build();
 
     {
         let mut basic = store.basic(&prop_path).unwrap();
@@ -76,48 +73,52 @@ fn test_save_load_comprehensive() {
     let table_def = TableDefinition::new(
         "Table",
         vec![
-            ("col_str", BasicDefinition::new_string("String col")),
-            ("col_num", BasicDefinition::new_number("Number col")),
+            (
+                "col_str".try_into().unwrap(),
+                BasicDefinition::new_string("String col"),
+            ),
+            (
+                "col_num".try_into().unwrap(),
+                BasicDefinition::new_number("Number col"),
+            ),
         ],
-    )
-    .unwrap();
+    );
 
     let struct_def = StructDefinition::new(
         "Struct",
         vec![
             (
-                "s_basic",
+                "s_basic".try_into().unwrap(),
                 StructItemDefinition::Basic(BasicDefinition::new_string("Struct basic")),
             ),
-            ("s_table", StructItemDefinition::Table(table_def.clone())),
+            (
+                "s_table".try_into().unwrap(),
+                StructItemDefinition::Table(table_def.clone()),
+            ),
         ],
-    )
-    .unwrap();
+    );
 
     let map_def = MapDefinition::new("Map", struct_def.clone());
 
     // 2. Define Object with all types
     let obj_def = ObjectDefinition::builder("Comprehensive Object")
         .with(
-            "p_string",
+            "p_string".try_into().unwrap(),
             PropertyDefinition::new("String", BasicDefinition::new_string("S")),
         )
-        .unwrap()
         .with(
-            "p_number",
+            "p_number".try_into().unwrap(),
             PropertyDefinition::new("Number", BasicDefinition::new_number("N")),
         )
-        .unwrap()
         .with(
-            "p_file",
+            "p_file".try_into().unwrap(),
             PropertyDefinition::new(
                 "File",
                 BasicDefinition::new_file("F", FileDefinition::new("*.txt")),
             ),
         )
-        .unwrap()
         .with(
-            "p_choice",
+            "p_choice".try_into().unwrap(),
             PropertyDefinition::new(
                 "Choice",
                 BasicDefinition::new_choice(
@@ -126,17 +127,22 @@ fn test_save_load_comprehensive() {
                 ),
             ),
         )
-        .unwrap()
-        .with("p_struct", PropertyDefinition::new("Struct", struct_def))
-        .unwrap()
-        .with("p_table", PropertyDefinition::new("Table", table_def))
-        .unwrap()
-        .with("p_map", PropertyDefinition::new("Map", map_def))
-        .unwrap()
+        .with(
+            "p_struct".try_into().unwrap(),
+            PropertyDefinition::new("Struct", struct_def),
+        )
+        .with(
+            "p_table".try_into().unwrap(),
+            PropertyDefinition::new("Table", table_def),
+        )
+        .with(
+            "p_map".try_into().unwrap(),
+            PropertyDefinition::new("Map", map_def),
+        )
         .finish();
 
-    let obj_key = ShareableString::from("comp_obj");
-    let mut obj_proxy = store.create_object(&obj_key, &obj_def).unwrap();
+    let obj_key: datastore::StoreKey = "comp_obj".into();
+    let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     // 3. Populate data
     // p_string
@@ -205,7 +211,7 @@ fn test_save_load_comprehensive() {
     // p_map
     {
         let map_container = obj_proxy.container("p_map").unwrap();
-        let item_key = ShareableString::from("entry_1");
+        let item_key = "entry_1";
         let entry_proxy = map_container.insert_map_entry(item_key).unwrap();
         let path = entry_proxy.path();
         // Entry in map is a Struct. Let's set its s_basic.
@@ -326,9 +332,9 @@ fn test_save_load_comprehensive() {
 #[test]
 fn test_launder_consistency_after_load() {
     let store = Store::new(SharedStringStore::new());
-    let obj_key = ShareableString::from("test_obj");
+    let obj_key = "test_obj".try_into().unwrap();
     let def = ObjectDefinition::builder("Test").finish();
-    store.create_object(&obj_key, &def).unwrap();
+    store.create_object(obj_key, &def).unwrap();
 
     let temp_file = "test_launder.json";
     let json = store.to_json().unwrap();

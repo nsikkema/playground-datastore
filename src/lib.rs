@@ -27,12 +27,12 @@
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
-//! builder.add("name", PropertyDefinition::new("User Name", BasicDefinition::new_string("Name"))).unwrap();
+//! builder.add("name".into(), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
 //! let def = builder.finish();
 //!
 //! // 2. Create a store and add an object
 //! let store = Store::new(Default::default());
-//! store.create_object("user_1", &def).unwrap();
+//! store.create_object("user_1".into(), &def).unwrap();
 //!
 //! // 3. Access data via a proxy
 //! let mut proxy = store.object(&"user_1".into()).unwrap();
@@ -45,8 +45,11 @@
 //! ```
 
 pub mod definition;
+pub mod key;
 pub mod shareable_string;
 pub mod store;
+
+pub use crate::key::StoreKey;
 
 use crate::shareable_string::ShareableString;
 use std::fmt::{Display, Formatter};
@@ -107,18 +110,3 @@ impl Display for StoreError {
 }
 
 impl std::error::Error for StoreError {}
-
-/// Validates that a key is not empty and only contains valid characters.
-/// Valid characters are lowercase a-z, digits 0-9, and underscores.
-pub(crate) fn validate_key(key: &ShareableString) -> Result<(), StoreError> {
-    let s = key.as_str();
-    if s.is_empty() {
-        return Err(StoreError::KeyEmpty);
-    }
-    for c in s.chars() {
-        if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '_' {
-            return Err(StoreError::KeyInvalidCharacter(s.to_string()));
-        }
-    }
-    Ok(())
-}

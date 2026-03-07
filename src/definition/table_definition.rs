@@ -1,6 +1,6 @@
+use crate::StoreKey;
 use crate::definition::BasicDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::{StoreError, validate_key};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -14,20 +14,19 @@ pub struct TableDefinition {
 
 impl TableDefinition {
     /// Creates a new `TableDefinition` with a description and a list of columns.
-    pub fn new<S1: Into<ShareableString>, S2: Into<ShareableString>>(
+    pub fn new<S1: Into<ShareableString>>(
         description: S1,
-        columns: Vec<(S2, BasicDefinition)>,
-    ) -> Result<Self, StoreError> {
+        columns: Vec<(StoreKey, BasicDefinition)>,
+    ) -> Self {
         let mut cols = BTreeMap::new();
         for (id, item) in columns {
-            let key = id.into();
-            validate_key(&key)?;
+            let key = id.key;
             cols.insert(key, item);
         }
-        Ok(Self {
+        Self {
             description: description.into(),
             columns: Arc::new(cols),
-        })
+        }
     }
 
     /// Returns the description of the table.

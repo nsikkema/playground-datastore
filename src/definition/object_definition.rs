@@ -1,6 +1,6 @@
+use crate::StoreKey;
 use crate::definition::PropertyDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::{StoreError, validate_key};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -22,25 +22,15 @@ impl ObjectDefinitionBuilder {
     }
 
     /// Adds a property to the builder and returns the builder.
-    pub fn with<S: Into<ShareableString>>(
-        mut self,
-        key: S,
-        property: PropertyDefinition,
-    ) -> Result<Self, StoreError> {
-        self.add(key, property)?;
-        Ok(self)
+    pub fn with(mut self, key: StoreKey, property: PropertyDefinition) -> Self {
+        self.add(key, property);
+        self
     }
 
     /// Adds a property to the builder.
-    pub fn add<S: Into<ShareableString>>(
-        &mut self,
-        key: S,
-        property: PropertyDefinition,
-    ) -> Result<(), StoreError> {
-        let key = key.into();
-        validate_key(&key)?;
+    pub fn add(&mut self, key: StoreKey, property: PropertyDefinition) {
+        let key = key.key;
         self.properties.insert(key, property);
-        Ok(())
     }
 
     /// Removes a property from the builder.

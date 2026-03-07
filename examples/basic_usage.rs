@@ -9,24 +9,22 @@ fn main() {
     // 2. Define an Object Structure
     // An Object is a collection of named properties.
     let mut user_def = ObjectDefinition::builder("User Profile");
-    user_def
-        .add(
-            "username",
-            PropertyDefinition::new("The user's unique name", BasicDefinition::new_string("")),
-        )
-        .unwrap();
-    user_def
-        .add(
-            "age",
-            PropertyDefinition::new("The user's age", BasicDefinition::new_number("0")),
-        )
-        .unwrap();
+    user_def.add(
+        "username".try_into().unwrap(),
+        PropertyDefinition::new("The user's unique name", BasicDefinition::new_string("")),
+    );
+    user_def.add(
+        "age".try_into().unwrap(),
+        PropertyDefinition::new("The user's age", BasicDefinition::new_number("0")),
+    );
 
     let def = user_def.finish();
 
     // 3. Add an Object to the Store
     // Objects are added at the top level with a unique key.
-    store.create_object("user_123", &def).unwrap();
+    store
+        .create_object("user_123".try_into().unwrap(), &def)
+        .unwrap();
 
     // 4. Access Data via Proxies
     // Proxies provide a way to interact with data in the store.
