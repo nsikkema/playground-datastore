@@ -94,7 +94,11 @@ where
     S5: Into<ShareableString>,
 {
     fn from((s1, s2, s3, s4, s5): (S1, S2, S3, S4, S5)) -> Self {
-        StorePath::new(s1).property(s2).map_key(s3).struct_item(s4).property(s5)
+        StorePath::new(s1)
+            .property(s2)
+            .map_key(s3)
+            .struct_item(s4)
+            .property(s5)
     }
 }
 
@@ -288,7 +292,10 @@ impl StorePathBuilder<ObjectState> {
     }
 
     /// Adds a property segment to the path.
-    pub fn property(mut self, property_key: impl Into<ShareableString>) -> StorePathBuilder<PropertyState> {
+    pub fn property(
+        mut self,
+        property_key: impl Into<ShareableString>,
+    ) -> StorePathBuilder<PropertyState> {
         self.segments.push(Segment::Property(property_key.into()));
         StorePathBuilder {
             object_key: self.object_key,
@@ -309,7 +316,10 @@ impl StorePathBuilder<ObjectState> {
 
 impl StorePathBuilder<PropertyState> {
     /// Adds a map key segment to the path.
-    pub fn map_key(mut self, map_key: impl Into<ShareableString>) -> StorePathBuilder<MapEntryState> {
+    pub fn map_key(
+        mut self,
+        map_key: impl Into<ShareableString>,
+    ) -> StorePathBuilder<MapEntryState> {
         self.segments.push(Segment::MapKey(map_key.into()));
         StorePathBuilder {
             object_key: self.object_key,
@@ -319,7 +329,10 @@ impl StorePathBuilder<PropertyState> {
     }
 
     /// Adds a struct item segment to the path.
-    pub fn struct_item(mut self, struct_key: impl Into<ShareableString>) -> StorePathBuilder<StructItemState> {
+    pub fn struct_item(
+        mut self,
+        struct_key: impl Into<ShareableString>,
+    ) -> StorePathBuilder<StructItemState> {
         self.segments.push(Segment::StructItem(struct_key.into()));
         StorePathBuilder {
             object_key: self.object_key,
@@ -340,7 +353,10 @@ impl StorePathBuilder<PropertyState> {
 
 impl StorePathBuilder<MapEntryState> {
     /// Adds a struct item segment to the path.
-    pub fn struct_item(mut self, struct_key: impl Into<ShareableString>) -> StorePathBuilder<StructItemState> {
+    pub fn struct_item(
+        mut self,
+        struct_key: impl Into<ShareableString>,
+    ) -> StorePathBuilder<StructItemState> {
         self.segments.push(Segment::StructItem(struct_key.into()));
         StorePathBuilder {
             object_key: self.object_key,
@@ -443,9 +459,7 @@ mod tests {
         assert_eq!(path.to_string(), "obj");
 
         // Property path
-        let path = StorePath::builder("obj")
-            .property("prop")
-            .build();
+        let path = StorePath::builder("obj").property("prop").build();
         assert_eq!(path.kind, PathKind::Property);
         assert_eq!(path.to_string(), "obj/prop");
 

@@ -93,6 +93,12 @@ impl From<String> for ShareableString {
     }
 }
 
+impl From<&String> for ShareableString {
+    fn from(value: &String) -> Self {
+        Self::new(value.as_str())
+    }
+}
+
 impl From<&str> for ShareableString {
     fn from(value: &str) -> Self {
         Self::new(value)

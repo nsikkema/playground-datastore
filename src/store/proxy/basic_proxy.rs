@@ -35,7 +35,7 @@ impl BasicProxy {
     }
 
     /// Sets a new value in the proxy.
-    pub fn set_value<S: Into<ShareableString> + AsRef<str>>(&mut self, value: S) {
+    pub fn set_value<S: Into<ShareableString>>(&mut self, value: S) {
         let new_value = self.store.launder(value.into());
         self.data.set(new_value);
     }

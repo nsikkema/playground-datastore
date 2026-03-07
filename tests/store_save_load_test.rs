@@ -191,15 +191,15 @@ fn test_save_load_comprehensive() {
             .unwrap();
         let mut p = store.table(&path).unwrap();
         p.append_row();
-        p.set_cell(0, "col_str", "Row 0".into()).unwrap();
-        p.set_cell(0, "col_num", "10".into()).unwrap();
+        p.set_cell(0, "col_str", "Row 0").unwrap();
+        p.set_cell(0, "col_num", "10").unwrap();
         p.push().unwrap();
     }
     // p_table
     {
         let mut p = obj_proxy.table("p_table").unwrap();
         p.append_row();
-        p.set_cell(0, "col_str", "Table Row".into()).unwrap();
+        p.set_cell(0, "col_str", "Table Row").unwrap();
         p.push().unwrap();
     }
     // p_map

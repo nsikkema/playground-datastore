@@ -16,7 +16,7 @@ fn main() {
         .unwrap();
     let def = builder.finish();
 
-    store.create_object(&"app_settings".into(), &def).unwrap();
+    store.create_object("app_settings", &def).unwrap();
 
     // 2. Save the Store to a File
     // This will serialize the entire store state (objects, definitions, and shared strings).

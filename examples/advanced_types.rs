@@ -64,9 +64,7 @@ fn main() {
         .unwrap();
     let company_def = builder.finish();
 
-    store
-        .create_object(&"my_company".into(), &company_def)
-        .unwrap();
+    store.create_object("my_company", &company_def).unwrap();
 
     let mut company_proxy = store.object(&"my_company".into()).unwrap();
     let company_key = "my_company";
@@ -105,16 +103,12 @@ fn main() {
 
     // Add some rows
     table_proxy.append_row();
-    table_proxy
-        .set_cell(0, "item_id", "widget_a".into())
-        .unwrap();
-    table_proxy.set_cell(0, "quantity", "50".into()).unwrap();
+    table_proxy.set_cell(0, "item_id", "widget_a").unwrap();
+    table_proxy.set_cell(0, "quantity", "50").unwrap();
 
     table_proxy.append_row();
-    table_proxy
-        .set_cell(1, "item_id", "widget_b".into())
-        .unwrap();
-    table_proxy.set_cell(1, "quantity", "25".into()).unwrap();
+    table_proxy.set_cell(1, "item_id", "widget_b").unwrap();
+    table_proxy.set_cell(1, "quantity", "25").unwrap();
 
     table_proxy.push().unwrap();
 

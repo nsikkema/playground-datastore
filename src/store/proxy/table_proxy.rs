@@ -62,14 +62,16 @@ impl TableProxy {
     }
 
     /// Sets the value of a cell in the table.
-    pub fn set_cell(
+    pub fn set_cell<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         &mut self,
         row_index: usize,
-        column_key: &str,
-        value: ShareableString,
+        column_key: S1,
+        value: S2,
     ) -> Result<(), StoreError> {
-        let new_value = self.store.launder(value);
-        self.data.set_cell(row_index, column_key, new_value)
+        let column_key = column_key.into();
+        let new_value = self.store.launder(value.into());
+        self.data
+            .set_cell(row_index, column_key.as_str(), new_value)
     }
 }
 

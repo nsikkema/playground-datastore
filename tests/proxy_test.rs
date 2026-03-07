@@ -156,10 +156,7 @@ fn test_proxy_basic_operations() {
     assert!(name_proxy2.has_changed());
     let mut name_proxy2_mut = name_proxy2;
     name_proxy2_mut.pull().unwrap();
-    assert_eq!(
-        name_proxy2_mut.value().unwrap().as_ref(),
-        "Something else"
-    );
+    assert_eq!(name_proxy2_mut.value().unwrap().as_ref(), "Something else");
 }
 
 #[test]
@@ -227,21 +224,11 @@ fn test_proxy_multiple_properties() {
     // Verify both are updated
     let mut obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
     assert_eq!(
-        obj_proxy2
-            .basic("name")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        obj_proxy2.basic("name").unwrap().value().unwrap().as_ref(),
         "Alice"
     );
     assert_eq!(
-        obj_proxy2
-            .basic("age")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        obj_proxy2.basic("age").unwrap().value().unwrap().as_ref(),
         "30"
     );
 }

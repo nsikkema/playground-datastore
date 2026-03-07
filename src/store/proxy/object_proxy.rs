@@ -46,10 +46,8 @@ impl ObjectProxy {
     }
 
     /// Checks if a property with the given key exists in the object.
-    pub fn check_key<S: Into<ShareableString> + AsRef<str>>(
-        &self,
-        key: S,
-    ) -> Result<bool, StoreError> {
+    pub fn check_key<S: Into<ShareableString>>(&self, key: S) -> Result<bool, StoreError> {
+        let key = key.into();
         Ok(self.keys.iter().any(|k| k.as_ref() == key.as_ref()))
     }
 
@@ -59,10 +57,7 @@ impl ObjectProxy {
     }
 
     /// Returns a `BasicProxy` for the property with the given key.
-    pub fn basic<S: Into<ShareableString> + AsRef<str>>(
-        &mut self,
-        key: S,
-    ) -> Result<BasicProxy, StoreError> {
+    pub fn basic<S: Into<ShareableString>>(&mut self, key: S) -> Result<BasicProxy, StoreError> {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
@@ -74,10 +69,7 @@ impl ObjectProxy {
     }
 
     /// Returns a `TableProxy` for the property with the given key.
-    pub fn table<S: Into<ShareableString> + AsRef<str>>(
-        &mut self,
-        key: S,
-    ) -> Result<TableProxy, StoreError> {
+    pub fn table<S: Into<ShareableString>>(&mut self, key: S) -> Result<TableProxy, StoreError> {
         if !self.is_valid() {
             return Err(StoreError::ExpiredProxy);
         }
@@ -89,7 +81,7 @@ impl ObjectProxy {
     }
 
     /// Returns a `ContainerProxy` for the property with the given key.
-    pub fn container<S: Into<ShareableString> + AsRef<str>>(
+    pub fn container<S: Into<ShareableString>>(
         &mut self,
         key: S,
     ) -> Result<ContainerProxy, StoreError> {

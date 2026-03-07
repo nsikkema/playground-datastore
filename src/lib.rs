@@ -32,7 +32,7 @@
 //!
 //! // 2. Create a store and add an object
 //! let store = Store::new(Default::default());
-//! store.create_object(&"user_1".into(), &def).unwrap();
+//! store.create_object("user_1", &def).unwrap();
 //!
 //! // 3. Access data via a proxy
 //! let mut proxy = store.object(&"user_1".into()).unwrap();

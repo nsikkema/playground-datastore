@@ -42,12 +42,6 @@ fn test_add_object_from_another_store() {
     basic2_mut.set_value("Changed in Store 2");
 
     let basic1_after = store1.basic(&prop_path).unwrap();
-    assert_eq!(
-        basic1_after.value().unwrap().as_str(),
-        "Hello from Store 1"
-    );
-    assert_eq!(
-        basic2_mut.value().unwrap().as_str(),
-        "Changed in Store 2"
-    );
+    assert_eq!(basic1_after.value().unwrap().as_str(), "Hello from Store 1");
+    assert_eq!(basic2_mut.value().unwrap().as_str(), "Changed in Store 2");
 }

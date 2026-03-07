@@ -151,13 +151,14 @@ impl Store {
     }
 
     /// Creates a new object in the store and returns a proxy to it.
-    pub fn create_object(
+    pub fn create_object<S: Into<ShareableString>>(
         &self,
-        object_key: &ShareableString,
+        object_key: S,
         definition: &ObjectDefinition,
     ) -> Result<ObjectProxy, StoreError> {
-        self.internal.create_object(object_key, definition)?;
-        let path = StorePath::builder(object_key.clone()).build();
+        let object_key = self.launder(object_key.into());
+        self.internal.create_object(&object_key, definition)?;
+        let path = StorePath::builder(object_key).build();
         self.object(&path)
     }
 
@@ -300,8 +301,8 @@ impl Store {
     }
 
     /// Deletes the object with the specified key.
-    pub fn delete_object(&self, object_key: &ShareableString) -> Result<(), StoreError> {
-        self.internal.delete_object(object_key)
+    pub fn delete_object<S: Into<ShareableString>>(&self, object_key: S) -> Result<(), StoreError> {
+        self.internal.delete_object(&object_key.into())
     }
 
     /// Returns a list of all object keys in the store.
@@ -368,15 +369,19 @@ impl Store {
     }
 
     /// Copies an object from another store.
-    pub fn copy_object(
+    pub fn copy_object<S1: Into<ShareableString>, S2: Into<ShareableString>>(
         &self,
-        object_key: &ShareableString,
+        object_key: S1,
         source_store: &Store,
-        source_object_key: &ShareableString,
+        source_object_key: S2,
     ) -> Result<ObjectProxy, StoreError> {
-        let container = source_store.internal.get_object(source_object_key)?;
-        self.internal.add_object(object_key, &container)?;
-        let path = StorePath::builder(object_key.clone()).build();
+        let object_key = self.launder(object_key.into());
+        let source_object_key = source_object_key.into();
+        let container = source_store.internal.get_object(&source_object_key)?;
+        let container = container.launder(&self.internal.string_store);
+
+        self.internal.add_object(&object_key, &container)?;
+        let path = StorePath::builder(object_key).build();
         self.object(&path)
     }
 }

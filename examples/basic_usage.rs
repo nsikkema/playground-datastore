@@ -26,7 +26,7 @@ fn main() {
 
     // 3. Add an Object to the Store
     // Objects are added at the top level with a unique key.
-    store.create_object(&"user_123".into(), &def).unwrap();
+    store.create_object("user_123", &def).unwrap();
 
     // 4. Access Data via Proxies
     // Proxies provide a way to interact with data in the store.
@@ -55,10 +55,7 @@ fn main() {
 
     // Pull the latest data from the store.
     observer_proxy.pull().unwrap();
-    assert_eq!(
-        observer_proxy.value().unwrap().as_str(),
-        "johndoe_updated"
-    );
+    assert_eq!(observer_proxy.value().unwrap().as_str(), "johndoe_updated");
 
     println!("Username: {}", observer_proxy.value().unwrap());
     println!("Age: {}", age_proxy.value().unwrap());
