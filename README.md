@@ -10,7 +10,7 @@ Datastore is a library for managing complex, structured data in memory. It provi
 - **Thread-Safe**: Built-in support for concurrent access using `RwLock`.
 - **Observable**: Detect if data has changed since you last synced your proxy.
 - **Efficient**: Uses "Shareable Strings" (interned strings) to reduce memory overhead and speed up comparisons.
-- **Persistent**: Easily save and load the entire store state to/from JSON.
+- **Persistent**: Save and load the entire store state to/from JSON.
 
 ## Core Concepts
 
@@ -26,7 +26,7 @@ Definitions specify the structure and types of your data.
 The `Store` is the central repository for all your data. It holds a collection of top-level `Objects`.
 
 ### Proxies
-Proxies are handles to specific parts of the data within the store. They allow you to:
+Proxies handle specific parts of the data within the store. They allow you to:
 - `ObjectProxy`: Access and manage a top-level object.
 - `BasicProxy`: Read or update basic values like Strings and Numbers.
 - `ContainerProxy`: Interact with nested Structs and Maps.
@@ -47,7 +47,7 @@ Alternatively, you can use tuples for simple paths: `let p: StorePath = ("user_1
 `ShareableString` is an interned string type used throughout the library to optimize memory and performance.
 
 ## Example
-Examples can be found in the [examples/](examples/) folder:
+Examples can be found in the [examples](examples) folder:
 - [basic_usage.rs](examples/basic_usage.rs): A quick introduction to creating a store, defining objects, and using proxies.
 - [advanced_types.rs](examples/advanced_types.rs): Demonstrates how to use Structs, Maps, and Tables.
 - [persistence_usage.rs](examples/persistence_usage.rs): Shows how to save and load the store state to/from JSON.

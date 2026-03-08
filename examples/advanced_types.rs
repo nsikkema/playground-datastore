@@ -10,8 +10,8 @@ fn main() {
     // 1. Create a Store
     let store = Store::new(Default::default());
 
-    // 2. Define a Struct
-    // A Struct is a reusable nested structure with named fields.
+    // 2. Define the Struct
+    // A Struct is a reusable and nested structure with named fields.
     let address_def = StructDefinition::new(
         "Address",
         vec![
@@ -26,11 +26,11 @@ fn main() {
         ],
     );
 
-    // 3. Define a Map
+    // 3. Define the Map
     // A Map stores multiple instances of a Struct, keyed by strings.
     let contacts_def = MapDefinition::new("Contacts", address_def.clone());
 
-    // 4. Define a Table
+    // 4. Define the Table
     // A Table is a collection of rows with fixed columns.
     let inventory_def = TableDefinition::new(
         "Inventory",
@@ -80,7 +80,7 @@ fn main() {
     println!("HQ Street: {}", street_proxy.value().unwrap());
 
     // 7. Interact with the Map
-    // Maps allow inserting new entries that follow the defined Struct schema.
+    // Maps allows inserting new entries that follow the defined Struct schema.
     let branches_proxy = company_proxy.container("branches").unwrap();
 
     // Insert a new branch "london"

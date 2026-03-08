@@ -2,7 +2,7 @@ use crate::{ShareableString, StoreError};
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
-/// Represents the kind of a path in the store.
+/// Represents the kind of path in the store.
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub enum PathKind {
     /// The path refers to an object.
@@ -287,7 +287,7 @@ impl StorePathBuilder<ObjectState> {
         StorePathBuilder {
             object_key: self.object_key,
             segments: self.segments,
-            _state: std::marker::PhantomData,
+            _state: PhantomData,
         }
     }
 

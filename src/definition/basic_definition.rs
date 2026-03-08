@@ -63,7 +63,7 @@ impl ChoiceDefinition {
     }
 }
 
-/// The type of a basic definition.
+/// The type of basic definition.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum BasicDefinitionType {
     /// A string value.

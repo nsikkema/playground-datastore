@@ -214,7 +214,7 @@ fn test_save_load_comprehensive() {
         let item_key = "entry_1";
         let entry_proxy = map_container.insert_map_entry(item_key).unwrap();
         let path = entry_proxy.path();
-        // Entry in map is a Struct. Let's set its s_basic.
+        // Entry in the map is a Struct.
         let basic_path = path
             .clone()
             .to_builder()

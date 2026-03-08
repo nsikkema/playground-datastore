@@ -27,14 +27,14 @@ fn main() {
         .unwrap();
 
     // 4. Access Data via Proxies
-    // Proxies provide a way to interact with data in the store.
+    // The proxy provides a way to interact with data in the store.
     let mut user_proxy = store.object(&"user_123".into()).unwrap();
     let mut username_proxy = user_proxy.basic("username").unwrap();
     let mut age_proxy = user_proxy.basic("age").unwrap();
 
     // 5. Update Data
     // Changes are made to the proxy first, then pushed to the store.
-    username_proxy.set_value("johndoe");
+    username_proxy.set_value("john doe");
     username_proxy.push().unwrap();
 
     age_proxy.set_value("30");
@@ -45,7 +45,7 @@ fn main() {
     let mut observer_proxy = store.basic(&"user_123/username".into()).unwrap();
 
     // We update the data via another proxy.
-    username_proxy.set_value("johndoe_updated");
+    username_proxy.set_value("john doe updated");
     username_proxy.push().unwrap();
 
     // The store has changed, so has_changed() will return true.
@@ -53,7 +53,7 @@ fn main() {
 
     // Pull the latest data from the store.
     observer_proxy.pull().unwrap();
-    assert_eq!(observer_proxy.value().unwrap().as_str(), "johndoe_updated");
+    assert_eq!(observer_proxy.value().unwrap().as_str(), "john doe updated");
 
     println!("Username: {}", observer_proxy.value().unwrap());
     println!("Age: {}", age_proxy.value().unwrap());

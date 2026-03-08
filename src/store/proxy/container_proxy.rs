@@ -97,7 +97,7 @@ impl ContainerProxy {
         match &self.definition {
             ContainerDefinition::Map(map_def) => {
                 let entry_container = Container::new_struct(map_def.item_type().clone());
-                let entry_path = self.path.clone().to_builder().map_key(key).build().unwrap();
+                let entry_path = self.path.clone().to_builder().map_key(key).build()?;
                 self.store
                     .update_container_at_path(&entry_path, entry_container)?;
                 self.store.container(&entry_path)

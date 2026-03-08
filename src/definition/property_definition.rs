@@ -3,7 +3,7 @@ use crate::shareable_string::{ShareableString, SharedStringStore};
 use serde::{Deserialize, Serialize};
 use std::sync::Arc;
 
-/// The type of a property definition.
+/// The type of property definition.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum PropertyDefinitionType {
     /// A basic property (String, Number, etc.).
