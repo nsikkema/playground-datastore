@@ -218,9 +218,9 @@ fn test_empty_and_unicode() {
     assert_eq!(empty.as_ref(), "");
     assert_eq!(format!("{empty}"), "");
 
-    let uni = ShareableString::new("héllø 🦀");
-    assert_eq!(uni.as_ref(), "héllø 🦀");
-    assert_eq!(format!("{uni}"), "héllø 🦀");
+    let uni = ShareableString::new("🦀 ¡Hola! 🦀");
+    assert_eq!(uni.as_ref(), "🦀 ¡Hola! 🦀");
+    assert_eq!(format!("{uni}"), "🦀 ¡Hola! 🦀");
 }
 
 #[test]
