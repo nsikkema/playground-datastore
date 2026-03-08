@@ -21,9 +21,8 @@
 //! ## Example
 //!
 //! ```rust
-//! use datastore::store::{Store, StorePath};
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
-//! use datastore::store::traits::ProxyStoreTrait;
+//! use datastore::store::{ProxyStoreTrait, Store, StorePath};
 //! use datastore::path;
 //!
 //! // 1. Define your data structure

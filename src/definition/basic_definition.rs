@@ -64,9 +64,10 @@ impl ChoiceDefinition {
 }
 
 /// The type of basic definition.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub enum BasicDefinitionType {
     /// A string value.
+    #[default]
     String,
     /// A numeric value.
     Number,
@@ -106,12 +107,6 @@ pub struct BasicDefinition {
     description: ShareableString,
     item_type: Arc<BasicDefinitionType>,
     default_value: ShareableString,
-}
-
-impl Default for BasicDefinitionType {
-    fn default() -> Self {
-        Self::String
-    }
 }
 
 impl BasicDefinition {

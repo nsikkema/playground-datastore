@@ -64,6 +64,11 @@ impl SharedStringStore {
         self.string_store.read().len()
     }
 
+    /// Checks if the internal string store is empty.
+    pub fn is_empty(&self) -> bool {
+        self.string_store.read().is_empty()
+    }
+
     /// Returns true if the store contains the specified string.
     pub fn contains(&self, key: &str) -> bool {
         self.string_store.read().contains(key)

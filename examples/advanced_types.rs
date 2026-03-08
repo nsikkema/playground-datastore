@@ -3,8 +3,7 @@ use datastore::definition::{
     StructItemDefinition, TableDefinition,
 };
 use datastore::path;
-use datastore::store::traits::ProxyStoreTrait;
-use datastore::store::{Store, StorePath};
+use datastore::store::{ProxyStoreTrait, Store, StorePath};
 
 fn main() {
     // 1. Create a Store

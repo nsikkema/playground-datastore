@@ -3,9 +3,7 @@ use crate::definition::{
     MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
 };
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::store::StoreHashContainer;
-use crate::store::data::{Basic, Table};
-use crate::store::traits::CommonStoreTraitInternal;
+use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -193,7 +191,7 @@ impl Container {
     /// Clears the hash of this container and all nested items.
     pub(crate) fn clear_hash_all(&mut self) {
         self.clear_hash();
-        for (_, item) in &mut self.items {
+        for item in self.items.values_mut() {
             match item {
                 ContainerItem::Basic(item) => item.clear_hash(),
                 ContainerItem::Table(item) => item.clear_hash(),
@@ -204,7 +202,7 @@ impl Container {
 
     /// Updates the hash of this container and all nested items.
     pub(crate) fn update_blake3_hash_all(&mut self) {
-        for (_, item) in &mut self.items {
+        for item in self.items.values_mut() {
             match item {
                 ContainerItem::Basic(item) => item.update_blake3_hash(),
                 ContainerItem::Table(item) => item.update_blake3_hash(),

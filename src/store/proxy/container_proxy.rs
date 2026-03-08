@@ -1,8 +1,8 @@
 use crate::StoreError;
 use crate::shareable_string::ShareableString;
-use crate::store::traits::ProxyStoreTrait;
 use crate::store::{
-    Container, ContainerDefinition, ObjectProxy, Store, StoreHashContainer, StorePath,
+    Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
+    StorePath,
 };
 
 /// A proxy for a container in the store.
