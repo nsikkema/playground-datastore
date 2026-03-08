@@ -1,8 +1,9 @@
 use crate::StoreError;
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
-use crate::store::traits::ProxyStoreTrait;
-use crate::store::{BasicProxy, ContainerProxy, Store, StoreHashContainer, StorePath, TableProxy};
+use crate::store::{
+    BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, StorePath, TableProxy,
+};
 
 /// A proxy for a top-level object in the store.
 #[derive(Debug)]

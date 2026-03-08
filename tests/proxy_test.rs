@@ -3,8 +3,7 @@ use datastore::definition::{
     TableDefinition,
 };
 use datastore::shareable_string::{ShareableString, SharedStringStore};
-use datastore::store::Store;
-use datastore::store::traits::ProxyStoreTrait;
+use datastore::store::{ProxyStoreTrait, Store};
 
 #[test]
 fn test_complex_proxy_structure() {

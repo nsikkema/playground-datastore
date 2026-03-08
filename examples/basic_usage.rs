@@ -1,6 +1,5 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
-use datastore::store::Store;
-use datastore::store::traits::ProxyStoreTrait;
+use datastore::store::{ProxyStoreTrait, Store};
 
 fn main() {
     // 1. Create a Store

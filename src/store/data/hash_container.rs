@@ -45,7 +45,7 @@ impl StoreHashContainer {
 
     /// Returns the current hash value.
     pub fn get(&self) -> [u8; 32] {
-        self.hash.read().clone()
+        *self.hash.read()
     }
 
     /// Clears the hash value (sets it to zero).

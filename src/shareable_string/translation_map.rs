@@ -40,7 +40,7 @@ impl SharedStringTranslationMap {
         let mut write_lock = self.data.write();
         write_lock
             .entry(interned_key)
-            .or_insert_with(HashMap::new)
+            .or_default()
             .insert(interned_lang, interned_translation);
     }
 

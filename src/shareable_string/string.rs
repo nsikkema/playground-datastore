@@ -36,11 +36,6 @@ impl ShareableString {
         self.blake3_hash
     }
 
-    /// Returns a reference to the underlying string slice.
-    pub fn as_ref(&self) -> &str {
-        &self.data
-    }
-
     /// Returns the string as a string slice.
     pub fn as_str(&self) -> &str {
         &self.data

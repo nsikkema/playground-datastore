@@ -1,8 +1,9 @@
 use crate::StoreError;
 use crate::definition::BasicDefinition;
 use crate::shareable_string::ShareableString;
-use crate::store::traits::{CommonStoreTraitInternal, ProxyStoreTrait};
-use crate::store::{Basic, ObjectProxy, Store, StorePath};
+use crate::store::{
+    Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath,
+};
 
 /// A proxy for a basic data value in the store.
 pub struct BasicProxy {
@@ -26,7 +27,7 @@ impl BasicProxy {
 
     /// Returns a reference to the basic definition.
     pub fn definition(&self) -> &BasicDefinition {
-        &self.data.definition()
+        self.data.definition()
     }
 
     /// Returns the current value from the proxy.
