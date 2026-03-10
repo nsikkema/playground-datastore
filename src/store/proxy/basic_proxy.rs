@@ -2,7 +2,7 @@ use crate::StoreError;
 use crate::definition::BasicDefinition;
 use crate::shareable_string::ShareableString;
 use crate::store::{
-    Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath,
+    Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath, TreePrint,
 };
 
 /// A proxy for a basic data value in the store.
@@ -39,6 +39,17 @@ impl BasicProxy {
     pub fn set_value<S: Into<ShareableString>>(&mut self, value: S) {
         let new_value = self.store.launder(value.into());
         self.data.set(new_value);
+    }
+
+    /// Prints the basic property as a tree for debugging.
+    pub fn tree_print(&self) {
+        let label = self
+            .path
+            .segments()
+            .last()
+            .map(|s| s.key().as_str())
+            .unwrap_or_else(|| self.path.object_key().as_str());
+        self.data.tree_print(label, "", true);
     }
 }
 

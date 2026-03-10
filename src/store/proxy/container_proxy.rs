@@ -2,7 +2,7 @@ use crate::StoreError;
 use crate::shareable_string::ShareableString;
 use crate::store::{
     Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
-    StorePath,
+    StorePath, TreePrint,
 };
 
 /// A proxy for a container in the store.
@@ -103,6 +103,19 @@ impl ContainerProxy {
                 self.store.container(&entry_path)
             }
             _ => Err(StoreError::PropertyNotFound),
+        }
+    }
+
+    /// Prints the container as a tree for debugging.
+    pub fn tree_print(&self) {
+        if let Ok(container) = self.store.get_container_internal(&self.path) {
+            let label = self
+                .path
+                .segments()
+                .last()
+                .map(|s| s.key().as_str())
+                .unwrap_or_else(|| self.path.object_key().as_str());
+            container.tree_print(label, "", true);
         }
     }
 }

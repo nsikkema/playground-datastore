@@ -3,7 +3,7 @@ use crate::definition::{
     MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
 };
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table};
+use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -331,5 +331,50 @@ impl CommonStoreTraitInternal for Container {
 
     fn clear_hash(&mut self) {
         self.blake3_hash.clear();
+    }
+}
+
+impl TreePrint for ContainerItem {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        match self {
+            ContainerItem::Basic(b) => b.tree_print(label, prefix, last),
+            ContainerItem::Table(t) => t.tree_print(label, prefix, last),
+            ContainerItem::Container(c) => c.tree_print(label, prefix, last),
+        }
+    }
+}
+
+impl TreePrint for Container {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        let type_str = match &self.definition {
+            ContainerDefinition::Struct(_) => "Struct",
+            ContainerDefinition::Map(_) => "Map",
+            ContainerDefinition::Object(_) => "Object",
+        };
+        let description = match &self.definition {
+            ContainerDefinition::Struct(s) => s.description(),
+            ContainerDefinition::Map(m) => m.description(),
+            ContainerDefinition::Object(o) => o.description(),
+        };
+
+        println!(
+            "{}{}{}: [{}] ({})",
+            prefix,
+            Self::branch_char(last),
+            label,
+            type_str,
+            description
+        );
+
+        let next_prefix = Self::next_prefix(prefix, last);
+        let mut keys: Vec<_> = self.items.keys().collect();
+        keys.sort();
+
+        for (i, key) in keys.iter().enumerate() {
+            let item_last = i == keys.len() - 1;
+            if let Some(item) = self.items.get(*key) {
+                item.tree_print(key.as_str(), &next_prefix, item_last);
+            }
+        }
     }
 }

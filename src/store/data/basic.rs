@@ -1,6 +1,6 @@
 use crate::definition::BasicDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::store::{CommonStoreTraitInternal, StoreHashContainer};
+use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 use serde::{Deserialize, Serialize};
 
 /// Represents a basic data value in the store (String, Number, etc.).
@@ -78,5 +78,18 @@ impl CommonStoreTraitInternal for Basic {
 
     fn clear_hash(&mut self) {
         self.blake3_hash.clear();
+    }
+}
+
+impl TreePrint for Basic {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        println!(
+            "{}{}{}: {} ({})",
+            prefix,
+            Self::branch_char(last),
+            label,
+            self.value,
+            self.definition.description()
+        );
     }
 }

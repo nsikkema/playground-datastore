@@ -1,7 +1,7 @@
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
-use crate::store::traits::CommonStoreTraitInternal;
+use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
 use crate::{StoreError, StoreKey};
 use parking_lot::RwLock;
@@ -386,6 +386,21 @@ impl Store {
         let path = StorePath::builder(object_key).build();
         self.object(&path)
     }
+
+    /// Prints the entire store as a tree for debugging.
+    pub fn tree_print(&self) {
+        println!("Store");
+        let objects = self.internal.objects.read();
+        let mut keys: Vec<_> = objects.keys().collect();
+        keys.sort();
+
+        for (i, key) in keys.iter().enumerate() {
+            let last = i == keys.len() - 1;
+            if let Some(container) = objects.get(*key) {
+                container.tree_print(key.as_str(), "", last);
+            }
+        }
+    }
 }
 
 /// Splits a path into its parent path and the last segment.
@@ -411,7 +426,7 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
 
 impl Segment {
     /// Returns the key associated with the segment.
-    fn key(&self) -> &ShareableString {
+    pub(crate) fn key(&self) -> &ShareableString {
         match self {
             Segment::Property(key) => key,
             Segment::MapKey(key) => key,

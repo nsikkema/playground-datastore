@@ -113,4 +113,7 @@ fn main() {
             i, row["item_id"], row["quantity"]
         );
     }
+
+    println!("\nFull Store Tree Print:");
+    store.tree_print();
 }
