@@ -1,7 +1,7 @@
 name: Rust - Cargo Machete
 on: [ pull_request ]
 jobs:
-  cargo-machete:
+  rust-cargo-machete:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout

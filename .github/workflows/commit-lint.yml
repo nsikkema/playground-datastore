@@ -4,7 +4,7 @@ permissions:
   contents: read
   pull-requests: read
 jobs:
-  commitlint:
+  commit-lint-messages:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v4

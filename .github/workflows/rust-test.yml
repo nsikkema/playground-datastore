@@ -1,7 +1,7 @@
 name: Rust - Test
 on: [ pull_request ]
 jobs:
-  test:
+  rust-test:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
