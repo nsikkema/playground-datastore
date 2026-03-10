@@ -27,7 +27,7 @@
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
-//! builder.add("name".into(), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
+//! builder.insert("name".into(), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
 //! let def = builder.finish();
 //!
 //! // 2. Create a store and add an object
@@ -87,6 +87,8 @@ pub enum StoreError {
     RedoNotAvailable,
     /// Failed to serialize or deserialize the store state.
     SerializationError(String),
+    /// A property conflict occurred during inheritance.
+    PropertyConflict(ShareableString),
 }
 
 impl Display for StoreError {
@@ -109,6 +111,7 @@ impl Display for StoreError {
             StoreError::UndoNotAvailable => write!(f, "Undo not available"),
             StoreError::RedoNotAvailable => write!(f, "Redo not available"),
             StoreError::SerializationError(s) => write!(f, "Serialization error: {}", s),
+            StoreError::PropertyConflict(s) => write!(f, "Property conflict: {}", s),
         }
     }
 }

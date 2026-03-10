@@ -46,20 +46,21 @@ fn main() {
     );
 
     // 5. Create an Object with these components
-    let mut builder = ObjectDefinition::builder("Company Data");
-    builder.add(
-        "hq_address".try_into().unwrap(),
-        PropertyDefinition::new("Headquarters", address_def),
-    );
-    builder.add(
-        "branches".try_into().unwrap(),
-        PropertyDefinition::new("Branch Offices", contacts_def),
-    );
-    builder.add(
-        "stock".try_into().unwrap(),
-        PropertyDefinition::new("Warehouse Stock", inventory_def),
-    );
-    let company_def = builder.finish();
+    let builder = ObjectDefinition::builder("Company Data");
+    let company_def = builder
+        .with_inserted(
+            "hq_address".try_into().unwrap(),
+            PropertyDefinition::new("Headquarters", address_def),
+        )
+        .with_inserted(
+            "branches".try_into().unwrap(),
+            PropertyDefinition::new("Branch Offices", contacts_def),
+        )
+        .with_inserted(
+            "stock".try_into().unwrap(),
+            PropertyDefinition::new("Warehouse Stock", inventory_def),
+        )
+        .finish();
 
     store
         .create_object("my_company".try_into().unwrap(), &company_def)

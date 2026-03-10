@@ -8,11 +8,11 @@ fn main() {
     // 2. Define an Object Structure
     // An Object is a collection of named properties.
     let mut user_def = ObjectDefinition::builder("User Profile");
-    user_def.add(
+    user_def.insert(
         "username".try_into().unwrap(),
         PropertyDefinition::new("The user's unique name", BasicDefinition::new_string("")),
     );
-    user_def.add(
+    user_def.insert(
         "age".try_into().unwrap(),
         PropertyDefinition::new("The user's age", BasicDefinition::new_number("0")),
     );

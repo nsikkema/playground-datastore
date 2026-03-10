@@ -9,7 +9,7 @@ fn test_add_object_from_another_store() {
 
     let obj_key1: datastore::StoreKey = "object1".into();
     let def = ObjectDefinition::builder("Test Object")
-        .with(
+        .with_inserted(
             "prop1".try_into().unwrap(),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("String property")),
         )

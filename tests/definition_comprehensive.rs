@@ -116,11 +116,11 @@ fn test_property_definition_comprehensive() {
 #[test]
 fn test_object_definition_comprehensive() {
     let obj_def = ObjectDefinition::builder("Obj Desc")
-        .with(
+        .with_inserted(
             "p1".try_into().unwrap(),
             PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
         )
-        .with(
+        .with_inserted(
             "p2".try_into().unwrap(),
             PropertyDefinition::new("P2", BasicDefinition::new_number("D2")),
         )
@@ -181,7 +181,7 @@ fn test_launder_comprehensive() {
 
     // Test ObjectDefinition launder
     let obj_def = ObjectDefinition::builder("Obj")
-        .with("prop".try_into().unwrap(), prop_def)
+        .with_inserted("prop".try_into().unwrap(), prop_def)
         .finish();
     let laundered_obj = obj_def.launder(&store);
     assert_eq!(laundered_obj.description(), obj_def.description());

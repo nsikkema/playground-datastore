@@ -38,7 +38,7 @@ fn test_complex_proxy_structure() {
 
     // 3. Create an Object Definition containing the Struct
     let mut builder = ObjectDefinition::builder("Complex Object");
-    builder.add(
+    builder.insert(
         "outer_struct".try_into().unwrap(),
         PropertyDefinition::new("Outer Struct", struct_def),
     );
@@ -117,7 +117,7 @@ fn test_proxy_basic_operations() {
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
@@ -164,7 +164,7 @@ fn test_proxy_deleted_object() {
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
@@ -192,11 +192,11 @@ fn test_proxy_multiple_properties() {
     let store = Store::new(SharedStringStore::new());
 
     let mut builder = ObjectDefinition::builder("Multi Prop Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
-    builder.add(
+    builder.insert(
         "age".try_into().unwrap(),
         PropertyDefinition::new("Age", BasicDefinition::new_string("The age")),
     );
@@ -231,7 +231,7 @@ fn test_proxy_sync_from_store() {
     let store = Store::new(SharedStringStore::new());
 
     let mut builder = ObjectDefinition::builder("Sync Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
@@ -263,7 +263,7 @@ fn test_proxy_sync_from_store() {
 fn test_proxy_is_valid_initially() {
     let store = Store::new(SharedStringStore::new());
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("")),
     );
@@ -280,7 +280,7 @@ fn test_proxy_get_object() {
 
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder.add(
+    builder.insert(
         "name".try_into().unwrap(),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );

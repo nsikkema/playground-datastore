@@ -11,7 +11,7 @@ fn test_save_load_file() {
     let store = Store::new(SharedStringStore::new());
     let obj_key: datastore::StoreKey = "my_object".into();
     let def = ObjectDefinition::builder("My Test Object")
-        .with(
+        .with_inserted(
             "prop1".try_into().unwrap(),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("A string")),
         )
@@ -101,22 +101,22 @@ fn test_save_load_comprehensive() {
 
     // 2. Define Object with all types
     let obj_def = ObjectDefinition::builder("Comprehensive Object")
-        .with(
+        .with_inserted(
             "p_string".try_into().unwrap(),
             PropertyDefinition::new("String", BasicDefinition::new_string("S")),
         )
-        .with(
+        .with_inserted(
             "p_number".try_into().unwrap(),
             PropertyDefinition::new("Number", BasicDefinition::new_number("N")),
         )
-        .with(
+        .with_inserted(
             "p_file".try_into().unwrap(),
             PropertyDefinition::new(
                 "File",
                 BasicDefinition::new_file("F", FileDefinition::new("*.txt")),
             ),
         )
-        .with(
+        .with_inserted(
             "p_choice".try_into().unwrap(),
             PropertyDefinition::new(
                 "Choice",
@@ -126,15 +126,15 @@ fn test_save_load_comprehensive() {
                 ),
             ),
         )
-        .with(
+        .with_inserted(
             "p_struct".try_into().unwrap(),
             PropertyDefinition::new("Struct", struct_def),
         )
-        .with(
+        .with_inserted(
             "p_table".try_into().unwrap(),
             PropertyDefinition::new("Table", table_def),
         )
-        .with(
+        .with_inserted(
             "p_map".try_into().unwrap(),
             PropertyDefinition::new("Map", map_def),
         )
