@@ -2,7 +2,7 @@ use datastore::definition::{
     BasicDefinition, ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition,
     TableDefinition,
 };
-use datastore::shareable_string::{ShareableString, SharedStringStore};
+use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store};
 
 #[test]
@@ -58,7 +58,7 @@ fn test_complex_proxy_structure() {
         .path()
         .clone()
         .to_builder()
-        .struct_item(ShareableString::from("table"))
+        .struct_item("table")
         .build()
         .unwrap();
     let mut table_proxy = store.table(&table_path).unwrap();
@@ -68,7 +68,7 @@ fn test_complex_proxy_structure() {
         .path()
         .clone()
         .to_builder()
-        .struct_item(ShareableString::from("inner_basic"))
+        .struct_item("inner_basic")
         .build()
         .unwrap();
     let mut basic_proxy = store.basic(&basic_path).unwrap();
@@ -78,13 +78,10 @@ fn test_complex_proxy_structure() {
     basic_proxy.set_value("100");
 
     table_proxy.append_row();
-    table_proxy
-        .set_cell(0, "col1", ShareableString::from("new_value"))
-        .unwrap();
-
+    table_proxy.set_cell(0, "col1", "new_value").unwrap();
 
     table_proxy.append_row();
-    table_proxy.set_row(1, vec!("new_value")).unwrap();
+    table_proxy.set_row(1, vec!["new_value"]).unwrap();
 
     // 9. Check change detection
     assert!(basic_proxy.has_changed());

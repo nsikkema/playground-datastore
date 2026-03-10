@@ -2,7 +2,7 @@ use datastore::definition::{
     BasicDefinition, ChoiceDefinition, FileDefinition, MapDefinition, ObjectDefinition,
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
-use datastore::shareable_string::{ShareableString, SharedStringStore};
+use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store, StorePath};
 use std::fs;
 
@@ -339,11 +339,8 @@ fn test_launder_consistency_after_load() {
     let json = store.to_json().unwrap();
     let loaded_store = Store::from_json(&json).unwrap();
 
-    let s1 = ShareableString::from("hello");
-    let s2 = ShareableString::from("hello");
-
-    let laundered1 = loaded_store.launder(s1);
-    let laundered2 = loaded_store.launder(s2);
+    let laundered1 = loaded_store.launder("hello".into());
+    let laundered2 = loaded_store.launder("hello".into());
 
     assert!(laundered1.ptr_eq(&laundered2));
 

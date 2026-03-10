@@ -1,6 +1,6 @@
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
-    StructItemDefinition, TableDefinition,
+    TableDefinition,
 };
 use datastore::path;
 use datastore::store::{ProxyStoreTrait, Store, StorePath};
@@ -16,12 +16,9 @@ fn main() {
         vec![
             (
                 "street".try_into().unwrap(),
-                StructItemDefinition::Basic(BasicDefinition::new_string("")),
+                BasicDefinition::new_string(""),
             ),
-            (
-                "city".try_into().unwrap(),
-                StructItemDefinition::Basic(BasicDefinition::new_string("")),
-            ),
+            ("city".try_into().unwrap(), BasicDefinition::new_string("")),
         ],
     );
 

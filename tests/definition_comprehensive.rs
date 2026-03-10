@@ -162,7 +162,7 @@ fn test_launder_comprehensive() {
         "Struct",
         vec![(
             "field".try_into().unwrap(),
-            StructItemDefinition::from(BasicDefinition::new_string("F")),
+            BasicDefinition::new_string("F"),
         )],
     );
     let laundered_struct = struct_def.launder(&store);

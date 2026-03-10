@@ -1,5 +1,5 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
-use datastore::shareable_string::{ShareableString, SharedStringStore};
+use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store, StorePath};
 
 #[test]
@@ -17,7 +17,7 @@ fn test_add_object_from_another_store() {
 
     let _proxy1 = store1.create_object(obj_key1.clone(), &def).unwrap();
     let prop_path = StorePath::builder(obj_key1.clone())
-        .property(ShareableString::from("prop1"))
+        .property("prop1")
         .build();
     let mut basic1 = store1.basic(&prop_path).unwrap();
     basic1.set_value("Hello from Store 1");
@@ -32,7 +32,7 @@ fn test_add_object_from_another_store() {
     assert_eq!(proxy2.description().as_str(), "Test Object");
 
     let prop_path2 = StorePath::builder(obj_key2.clone())
-        .property(ShareableString::from("prop1"))
+        .property("prop1")
         .build();
     let basic2 = store2.basic(&prop_path2).unwrap();
     assert_eq!(basic2.value().unwrap().as_str(), "Hello from Store 1");

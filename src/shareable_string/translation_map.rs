@@ -17,23 +17,23 @@ impl SharedStringTranslationMap {
         }
     }
 
-    pub fn get_translation(
-        &self,
-        key: &ShareableString,
-        language: &ShareableString,
-    ) -> Option<ShareableString> {
+    pub fn get_translation<K, L>(&self, key: K, language: L) -> Option<ShareableString>
+    where
+        K: AsRef<str>,
+        L: AsRef<str>,
+    {
         let read_lock = self.data.read();
         read_lock
-            .get(key)
-            .and_then(|translations| translations.get(language).cloned())
+            .get(key.as_ref())
+            .and_then(|translations| translations.get(language.as_ref()).cloned())
     }
 
-    pub fn set_translation(
-        &self,
-        key: &ShareableString,
-        language: &ShareableString,
-        translation: &ShareableString,
-    ) {
+    pub fn set_translation<K, L, T>(&self, key: K, language: L, translation: T)
+    where
+        K: Into<ShareableString> + AsRef<str>,
+        L: Into<ShareableString> + AsRef<str>,
+        T: Into<ShareableString> + AsRef<str>,
+    {
         let interned_key = self.store.launder(key);
         let interned_lang = self.store.launder(language);
         let interned_translation = self.store.launder(translation);
@@ -44,16 +44,17 @@ impl SharedStringTranslationMap {
             .insert(interned_lang, interned_translation);
     }
 
-    pub fn set_translation_key(
-        &self,
-        key: &ShareableString,
-        data: &HashMap<ShareableString, ShareableString>,
-    ) {
+    pub fn set_translation_key<K, K2, V2>(&self, key: K, data: &HashMap<K2, V2>)
+    where
+        K: Into<ShareableString> + AsRef<str>,
+        K2: Into<ShareableString> + AsRef<str> + Clone,
+        V2: Into<ShareableString> + AsRef<str> + Clone,
+    {
         let interned_key = self.store.launder(key);
         let mut interned_data = HashMap::with_capacity(data.len());
         for (lang, translation) in data {
-            let interned_lang = self.store.launder(lang);
-            let interned_translation = self.store.launder(translation);
+            let interned_lang = self.store.launder(lang.clone());
+            let interned_translation = self.store.launder(translation.clone());
             interned_data.insert(interned_lang, interned_translation);
         }
         let mut write_lock = self.data.write();
@@ -71,16 +72,16 @@ mod tests {
         let map = SharedStringTranslationMap::new(store);
 
         // Create strings that are NOT in the map's store
-        let key = ShareableString::from("key");
-        let lang = ShareableString::from("en");
-        let translation = ShareableString::from("hello");
+        let key = "key";
+        let lang = "en";
+        let translation = "hello";
 
         // Assert they are NOT in the store initially
         assert!(!map.store.contains("key"));
         assert!(!map.store.contains("en"));
         assert!(!map.store.contains("hello"));
 
-        map.set_translation(&key, &lang, &translation);
+        map.set_translation(key, lang, translation);
 
         // Now they should be in the store because set_translation launders
         assert!(map.store.contains("key"));
@@ -92,7 +93,7 @@ mod tests {
         let interned_lang = map.store.get("en");
         let interned_translation = map.store.get("hello");
 
-        let retrieved_translation = map.get_translation(&interned_key, &interned_lang).unwrap();
+        let retrieved_translation = map.get_translation("key", "en").unwrap();
 
         assert!(Arc::ptr_eq(
             retrieved_translation.as_arc(),
@@ -114,14 +115,11 @@ mod tests {
         let store = SharedStringStore::new();
         let map = SharedStringTranslationMap::new(store);
 
-        let key = ShareableString::from("key2");
+        let key = "key2";
         let mut data = HashMap::new();
-        data.insert(
-            ShareableString::from("fr"),
-            ShareableString::from("bonjour"),
-        );
+        data.insert("fr", "bonjour");
 
-        map.set_translation_key(&key, &data);
+        map.set_translation_key(key, &data);
 
         assert!(map.store.contains("key2"));
         assert!(map.store.contains("fr"));

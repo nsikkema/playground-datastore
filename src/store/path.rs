@@ -527,19 +527,13 @@ mod tests {
 
     #[test]
     fn test_to_builder() {
-        let obj = ShareableString::from("obj");
-        let prop = ShareableString::from("prop");
-        let key = ShareableString::from("key");
+        let path = StorePath::builder("obj").property("prop").build();
 
-        let path = StorePath::builder(obj.clone())
-            .property(prop.clone())
-            .build();
-
-        let path2 = path.to_builder().map_key(key.clone()).build();
+        let path2 = path.to_builder().map_key("key").build();
 
         assert!(path2.is_ok());
         let path2 = path2.unwrap();
-        assert_eq!(path2.object_key(), &obj);
+        assert_eq!(path2.object_key().as_str(), "obj");
         assert_eq!(path2.segments().len(), 2);
         assert_eq!(path2.get_kind(), &PathKind::MapEntry);
     }
