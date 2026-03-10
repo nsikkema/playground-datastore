@@ -1,6 +1,6 @@
-use crate::StoreKey;
 use crate::definition::PropertyDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::{StoreError, StoreKey};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;
@@ -21,19 +21,92 @@ impl ObjectDefinitionBuilder {
         }
     }
 
-    /// Adds a property to the builder and returns the builder.
-    pub fn with(mut self, key: StoreKey, property: PropertyDefinition) -> Self {
-        self.add(key, property);
+    /// Returns a new builder with properties inherited from an existing `ObjectDefinition`.
+    ///
+    /// This method will overwrite existing properties with the same keys.
+    pub fn with_inherited(mut self, definition: ObjectDefinition) -> Self {
+        self.properties.extend(
+            definition
+                .properties
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
         self
     }
 
-    /// Adds a property to the builder.
-    pub fn add(&mut self, key: StoreKey, property: PropertyDefinition) {
+    /// Returns a new builder with properties inherited from an existing `ObjectDefinition`,
+    /// checking for conflicts.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StoreError::PropertyConflict` if any property key already exists in the builder.
+    pub fn with_inherited_checked(
+        mut self,
+        definition: ObjectDefinition,
+    ) -> Result<Self, StoreError> {
+        for (key, _) in definition.properties.iter() {
+            if self.properties.contains_key(key) {
+                return Err(StoreError::PropertyConflict(key.clone()));
+            }
+        }
+        self.properties.extend(
+            definition
+                .properties
+                .iter()
+                .map(|(k, v)| (k.clone(), v.clone())),
+        );
+        Ok(self)
+    }
+
+    /// Returns a new builder with properties inherited from another builder.
+    ///
+    /// This method will overwrite existing properties with the same keys.
+    pub fn with_inherited_from_builder(mut self, builder: ObjectDefinitionBuilder) -> Self {
+        self.properties.extend(builder.properties);
+        self
+    }
+
+    /// Returns a new builder with properties inherited from another builder, checking for conflicts.
+    ///
+    /// # Errors
+    ///
+    /// Returns `StoreError::PropertyConflict` if any property key already exists in the builder.
+    pub fn with_inherited_from_builder_checked(
+        mut self,
+        builder: ObjectDefinitionBuilder,
+    ) -> Result<Self, StoreError> {
+        for (key, _) in builder.properties.iter() {
+            if self.properties.contains_key(key) {
+                return Err(StoreError::PropertyConflict(key.clone()));
+            }
+        }
+        self.properties.extend(builder.properties);
+        Ok(self)
+    }
+
+    /// Returns a new builder with the property inserted.
+    ///
+    /// This method will overwrite existing properties with the same keys.
+    pub fn with_inserted(mut self, key: StoreKey, property: PropertyDefinition) -> Self {
+        self.insert(key, property);
+        self
+    }
+
+    /// Inserts a property into the current builder.
+    ///
+    /// This method will overwrite existing properties with the same keys.
+    pub fn insert(&mut self, key: StoreKey, property: PropertyDefinition) {
         let key = key.key;
         self.properties.insert(key, property);
     }
 
-    /// Removes a property from the builder.
+    /// Returns a new builder with the property removed.
+    pub fn without<S: Into<ShareableString>>(mut self, key: S) -> Self {
+        self.properties.remove(&key.into());
+        self
+    }
+
+    /// Removes a property from the current builder.
     pub fn remove<S: Into<ShareableString>>(&mut self, key: S) {
         self.properties.remove(&key.into());
     }
@@ -61,6 +134,8 @@ impl ObjectDefinition {
     }
 
     /// Returns a new `ObjectDefinitionBuilder` initialized with the properties of this definition.
+    ///
+    /// The new builder will have the specified description and a copy of the current properties.
     pub fn new_inherit<S: Into<ShareableString>>(&self, description: S) -> ObjectDefinitionBuilder {
         ObjectDefinitionBuilder {
             description: description.into(),

@@ -112,7 +112,26 @@ impl Table {
                 Err(StoreError::KeyNotFound)
             }
         } else {
-            Err(StoreError::KeyNotFound)
+            Err(StoreError::IndexNotFound)
+        }
+    }
+
+    /// Sets the values of a row in the table.
+    pub(crate) fn set_row(
+        &mut self,
+        row_index: usize,
+        values: Vec<ShareableString>,
+    ) -> Result<(), StoreError> {
+        if let Some(row) = self.rows.get_mut(row_index) {
+            for (value, key) in values.into_iter().zip(self.definition.keys()) {
+                if let Some(cell) = row.get_mut(key) {
+                    *cell = value;
+                }
+            }
+            self.update_blake3_hash();
+            Ok(())
+        } else {
+            Err(StoreError::IndexNotFound)
         }
     }
 

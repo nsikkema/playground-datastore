@@ -159,7 +159,7 @@ fn test_property_definition() {
 #[test]
 fn test_object_definition_basic() {
     let mut builder = ObjectDefinition::builder("Test Object");
-    builder.add(
+    builder.insert(
         "prop1".try_into().unwrap(),
         PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
     );

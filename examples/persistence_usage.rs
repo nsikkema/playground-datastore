@@ -8,7 +8,7 @@ fn main() {
     // 1. Create a Store and Populate it
     let store = Store::new(Default::default());
     let mut builder = ObjectDefinition::builder("Settings Object");
-    builder.add(
+    builder.insert(
         "theme".try_into().unwrap(),
         PropertyDefinition::new("App theme", BasicDefinition::new_string("light")),
     );
