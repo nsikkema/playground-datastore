@@ -1,8 +1,8 @@
-use datastore::StoreKey;
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
+use datastore::{StoreKey, store_key};
 
 #[test]
 fn test_basic_definition_string() {
@@ -58,14 +58,8 @@ fn test_table_definition() {
     let table_def = TableDefinition::new(
         "A table",
         vec![
-            (
-                "col1".try_into().unwrap(),
-                BasicDefinition::new_string("Column 1"),
-            ),
-            (
-                "col2".try_into().unwrap(),
-                BasicDefinition::new_number("Column 2"),
-            ),
+            (store_key!("col1"), BasicDefinition::new_string("Column 1")),
+            (store_key!("col2"), BasicDefinition::new_number("Column 2")),
         ],
     );
 
@@ -85,11 +79,11 @@ fn test_struct_definition() {
         "A struct",
         vec![
             (
-                "field1".try_into().unwrap(),
+                store_key!("field1"),
                 StructItemDefinition::Basic(BasicDefinition::new_string("Field 1")),
             ),
             (
-                "field2".try_into().unwrap(),
+                store_key!("field2"),
                 StructItemDefinition::Table(TableDefinition::new(
                     "Table field",
                     Vec::<(StoreKey, BasicDefinition)>::new(),
@@ -160,7 +154,7 @@ fn test_property_definition() {
 fn test_object_definition_basic() {
     let mut builder = ObjectDefinition::builder("Test Object");
     builder.insert(
-        "prop1".try_into().unwrap(),
+        store_key!("prop1"),
         PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
     );
     let obj_def = builder.finish();

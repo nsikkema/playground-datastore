@@ -23,16 +23,16 @@
 //! ```rust
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
 //! use datastore::store::{ProxyStoreTrait, Store, StorePath};
-//! use datastore::path;
+//! use datastore::{path, store_key};
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
-//! builder.insert("name".into(), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
+//! builder.insert(store_key!("name"), PropertyDefinition::new("User Name", BasicDefinition::new_string("Name")));
 //! let def = builder.finish();
 //!
 //! // 2. Create a store and add an object
 //! let store = Store::new(Default::default());
-//! store.create_object("user_1".into(), &def).unwrap();
+//! store.create_object(store_key!("user_1"), &def).unwrap();
 //!
 //! // 3. Access data via a proxy
 //! let mut user_proxy = store.object(&"user_1".into()).unwrap();
@@ -53,7 +53,8 @@ pub mod key;
 pub mod shareable_string;
 pub mod store;
 
-pub use crate::key::StoreKey;
+pub use crate::key::{ConstStoreKey, StoreKey};
+pub use crate::store::StorePath;
 
 use crate::shareable_string::ShareableString;
 use std::fmt::{Display, Formatter};

@@ -51,13 +51,13 @@ impl Default for StructItemDefinition {
 
 impl StructDefinition {
     /// Creates a new `StructDefinition` with a description and a list of items.
-    pub fn new<S1: Into<ShareableString>, I: Into<StructItemDefinition>>(
+    pub fn new<S1: Into<ShareableString>, K: Into<StoreKey>, I: Into<StructItemDefinition>>(
         description: S1,
-        item_type: Vec<(StoreKey, I)>,
+        item_type: Vec<(K, I)>,
     ) -> Self {
         let mut items = BTreeMap::new();
         for (k, v) in item_type {
-            let key = k.key;
+            let key = k.into().key;
             items.insert(key, v.into());
         }
         Self {

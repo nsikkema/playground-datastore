@@ -1,5 +1,6 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store_key;
 
 fn main() {
     // 1. Create a Store
@@ -9,11 +10,11 @@ fn main() {
     // An Object is a collection of named properties.
     let mut user_def = ObjectDefinition::builder("User Profile");
     user_def.insert(
-        "username".try_into().unwrap(),
+        store_key!("username"),
         PropertyDefinition::new("The user's unique name", BasicDefinition::new_string("")),
     );
     user_def.insert(
-        "age".try_into().unwrap(),
+        store_key!("age"),
         PropertyDefinition::new("The user's age", BasicDefinition::new_number("0")),
     );
 
@@ -21,9 +22,7 @@ fn main() {
 
     // 3. Add an Object to the Store
     // Objects are added at the top level with a unique key.
-    store
-        .create_object("user_123".try_into().unwrap(), &def)
-        .unwrap();
+    store.create_object(store_key!("user_123"), &def).unwrap();
 
     // 4. Access Data via Proxies
     // The proxy provides a way to interact with data in the store.

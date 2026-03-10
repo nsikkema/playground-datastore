@@ -58,7 +58,7 @@ where
     S2: Into<ShareableString>,
 {
     fn from((s1, s2): (S1, S2)) -> Self {
-        StorePath::new(s1).property(s2)
+        StorePath::new(s1.into()).property(s2)
     }
 }
 
@@ -69,7 +69,7 @@ where
     S3: Into<ShareableString>,
 {
     fn from((s1, s2, s3): (S1, S2, S3)) -> Self {
-        StorePath::new(s1).property(s2).property(s3)
+        StorePath::new(s1.into()).property(s2).property(s3)
     }
 }
 
@@ -81,7 +81,10 @@ where
     S4: Into<ShareableString>,
 {
     fn from((s1, s2, s3, s4): (S1, S2, S3, S4)) -> Self {
-        StorePath::new(s1).property(s2).map_key(s3).struct_item(s4)
+        StorePath::new(s1.into())
+            .property(s2)
+            .map_key(s3)
+            .struct_item(s4)
     }
 }
 
@@ -94,7 +97,7 @@ where
     S5: Into<ShareableString>,
 {
     fn from((s1, s2, s3, s4, s5): (S1, S2, S3, S4, S5)) -> Self {
-        StorePath::new(s1)
+        StorePath::new(s1.into())
             .property(s2)
             .map_key(s3)
             .struct_item(s4)

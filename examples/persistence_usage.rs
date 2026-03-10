@@ -1,5 +1,6 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::store::Store;
+use datastore::store_key;
 use std::fs;
 
 fn main() {
@@ -9,13 +10,13 @@ fn main() {
     let store = Store::new(Default::default());
     let mut builder = ObjectDefinition::builder("Settings Object");
     builder.insert(
-        "theme".try_into().unwrap(),
+        store_key!("theme"),
         PropertyDefinition::new("App theme", BasicDefinition::new_string("light")),
     );
     let def = builder.finish();
 
     store
-        .create_object("app_settings".try_into().unwrap(), &def)
+        .create_object(store_key!("app_settings"), &def)
         .unwrap();
 
     // 2. Save the Store to a File

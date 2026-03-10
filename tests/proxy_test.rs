@@ -4,6 +4,7 @@ use datastore::definition::{
 };
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store_key;
 
 #[test]
 fn test_complex_proxy_structure() {
@@ -12,22 +13,16 @@ fn test_complex_proxy_structure() {
     // 1. Create a Table Definition
     let table_def = TableDefinition::new(
         "Nested Table",
-        vec![(
-            "col1".try_into().unwrap(),
-            BasicDefinition::new_string("default"),
-        )],
+        vec![(store_key!("col1"), BasicDefinition::new_string("default"))],
     );
 
     // 2. Create a Struct Definition containing the Table and a Basic property
     let struct_def = StructDefinition::new(
         "Nested Struct",
         vec![
+            (store_key!("table"), StructItemDefinition::Table(table_def)),
             (
-                "table".try_into().unwrap(),
-                StructItemDefinition::Table(table_def),
-            ),
-            (
-                "inner_basic".try_into().unwrap(),
+                store_key!("inner_basic"),
                 StructItemDefinition::Basic(BasicDefinition::new_number_with_default(
                     "Inner Basic",
                     "42",
@@ -39,13 +34,13 @@ fn test_complex_proxy_structure() {
     // 3. Create an Object Definition containing the Struct
     let mut builder = ObjectDefinition::builder("Complex Object");
     builder.insert(
-        "outer_struct".try_into().unwrap(),
+        store_key!("outer_struct"),
         PropertyDefinition::new("Outer Struct", struct_def),
     );
     let obj_def = builder.finish();
 
     // 4. Create Object in Store
-    let obj_key = "complex_obj".try_into().unwrap();
+    let obj_key = store_key!("complex_obj");
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     // 5. Access Struct Container Proxy
@@ -123,13 +118,13 @@ fn test_proxy_basic_operations() {
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
     let obj_def = builder.finish();
 
     // 2. Create Object in Store
-    let obj_key = "my_object".try_into().unwrap();
+    let obj_key = store_key!("my_object");
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     assert_eq!(obj_proxy.description().as_ref(), "Test Object");
@@ -170,13 +165,13 @@ fn test_proxy_deleted_object() {
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
     let obj_def = builder.finish();
 
     // 2. Create Object in Store
-    let obj_key: datastore::StoreKey = "my_object".try_into().unwrap();
+    let obj_key: datastore::StoreKey = store_key!("my_object").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     assert!(obj_proxy.is_valid());
@@ -198,16 +193,16 @@ fn test_proxy_multiple_properties() {
 
     let mut builder = ObjectDefinition::builder("Multi Prop Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
     builder.insert(
-        "age".try_into().unwrap(),
+        store_key!("age"),
         PropertyDefinition::new("Age", BasicDefinition::new_string("The age")),
     );
     let obj_def = builder.finish();
 
-    let obj_key = "user_1".try_into().unwrap();
+    let obj_key = store_key!("user_1");
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     let mut name_proxy = obj_proxy.basic("name").unwrap();
@@ -231,12 +226,12 @@ fn test_proxy_sync_from_store() {
 
     let mut builder = ObjectDefinition::builder("Sync Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
     let obj_def = builder.finish();
 
-    let obj_key = "user_2".try_into().unwrap();
+    let obj_key = store_key!("user_2");
     let mut proxy1 = store.create_object(obj_key, &obj_def).unwrap();
     let mut proxy2 = store.object(&proxy1.path()).unwrap();
 
@@ -263,11 +258,11 @@ fn test_proxy_is_valid_initially() {
     let store = Store::new(SharedStringStore::new());
     let mut builder = ObjectDefinition::builder("Test Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("")),
     );
     let obj_def = builder.finish();
-    let obj_key = "valid_obj".try_into().unwrap();
+    let obj_key = store_key!("valid_obj");
     let obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     assert!(obj_proxy.is_valid());
@@ -280,13 +275,13 @@ fn test_proxy_get_object() {
     // 1. Create Object Definition
     let mut builder = ObjectDefinition::builder("Test Object");
     builder.insert(
-        "name".try_into().unwrap(),
+        store_key!("name"),
         PropertyDefinition::new("Name", BasicDefinition::new_string("The name")),
     );
     let obj_def = builder.finish();
 
     // 2. Create Object in Store
-    let obj_key = "my_object".try_into().unwrap();
+    let obj_key = store_key!("my_object");
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     // 3. Get Basic Property Proxy
