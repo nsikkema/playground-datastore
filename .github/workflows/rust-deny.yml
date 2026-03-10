@@ -1,7 +1,7 @@
 name: Rust - Cargo Deny
 on: [ pull_request ]
 jobs:
-  cargo-deny:
+  rust-cargo-deny:
     runs-on: ubuntu-24.04
     steps:
       - name: Checkout
