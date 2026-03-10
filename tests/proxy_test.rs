@@ -74,7 +74,7 @@ fn test_complex_proxy_structure() {
     let mut basic_proxy = store.basic(&basic_path).unwrap();
 
     // 8. Modify values at deep levels
-    assert_eq!(basic_proxy.value().unwrap().as_ref(), "42");
+    assert_eq!(basic_proxy.value().as_ref(), "42");
     basic_proxy.set_value("100");
 
     table_proxy.append_row();
@@ -97,7 +97,7 @@ fn test_complex_proxy_structure() {
     // 11. Verify changes via new proxies
     let _obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
     let basic_proxy2 = store.basic(&basic_path).unwrap();
-    assert_eq!(basic_proxy2.value().unwrap().as_ref(), "100");
+    assert_eq!(basic_proxy2.value().as_ref(), "100");
 
     let table_proxy2 = store.table(&table_path).unwrap();
     assert_eq!(table_proxy2.row_count(), 2);
@@ -136,7 +136,7 @@ fn test_proxy_basic_operations() {
 
     // 3. Get Basic Property Proxy
     let mut name_proxy = obj_proxy.basic("name").unwrap();
-    assert_eq!(name_proxy.value().unwrap().as_ref(), "");
+    assert_eq!(name_proxy.value().as_ref(), "");
 
     // 4. Set Value and Push
     name_proxy.set_value("Junie");
@@ -147,12 +147,12 @@ fn test_proxy_basic_operations() {
     // 5. Verify in store (via another proxy)
     let mut obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
     let name_proxy2 = obj_proxy2.basic("name").unwrap();
-    assert_eq!(name_proxy2.value().unwrap().as_ref(), "Junie");
+    assert_eq!(name_proxy2.value().as_ref(), "Junie");
 
     // 6. Test Pull
     name_proxy.set_value("Something else");
     // Before pushing name_proxy, name_proxy2 still has "Junie"
-    assert_eq!(name_proxy2.value().unwrap().as_ref(), "Junie");
+    assert_eq!(name_proxy2.value().as_ref(), "Junie");
 
     name_proxy.push().unwrap();
 
@@ -160,7 +160,7 @@ fn test_proxy_basic_operations() {
     assert!(name_proxy2.has_changed());
     let mut name_proxy2_mut = name_proxy2;
     name_proxy2_mut.pull().unwrap();
-    assert_eq!(name_proxy2_mut.value().unwrap().as_ref(), "Something else");
+    assert_eq!(name_proxy2_mut.value().as_ref(), "Something else");
 }
 
 #[test]
@@ -221,14 +221,8 @@ fn test_proxy_multiple_properties() {
 
     // Verify both are updated
     let mut obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
-    assert_eq!(
-        obj_proxy2.basic("name").unwrap().value().unwrap().as_ref(),
-        "Alice"
-    );
-    assert_eq!(
-        obj_proxy2.basic("age").unwrap().value().unwrap().as_ref(),
-        "30"
-    );
+    assert_eq!(obj_proxy2.basic("name").unwrap().value().as_ref(), "Alice");
+    assert_eq!(obj_proxy2.basic("age").unwrap().value().as_ref(), "30");
 }
 
 #[test]
@@ -255,7 +249,7 @@ fn test_proxy_sync_from_store() {
     let name_proxy2 = proxy2.basic("name").unwrap();
     // It seems proxy2 already sees "Bob" because they might share the same underlying Basic object
     // if object doesn't deep clone. Let's check.
-    assert_eq!(name_proxy2.value().unwrap().as_ref(), "Bob");
+    assert_eq!(name_proxy2.value().as_ref(), "Bob");
 
     // However, last_sync_hash in proxy2 should still be old
     assert!(proxy2.has_changed());

@@ -41,11 +41,11 @@
 //! name_proxy.set_value("Alice");
 //! name_proxy.push().unwrap();
 //!
-//! assert_eq!(name_proxy.value().unwrap().as_str(), "Alice");
+//! assert_eq!(name_proxy.value().as_str(), "Alice");
 //!
 //! // You can also access data directly via paths
 //! let mut name_proxy_direct = store.basic(&path!("user_1" / "name")).unwrap();
-//! assert_eq!(name_proxy_direct.value().unwrap().as_str(), "Alice");
+//! assert_eq!(name_proxy_direct.value().as_str(), "Alice");
 //! ```
 
 pub mod definition;

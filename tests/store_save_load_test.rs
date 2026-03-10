@@ -54,7 +54,7 @@ fn test_save_load_file() {
     let loaded_basic = loaded_store
         .basic(&prop_path)
         .expect("Could not find property in loaded store");
-    assert_eq!(loaded_basic.value().unwrap().as_str(), "Saved data");
+    assert_eq!(loaded_basic.value().as_str(), "Saved data");
 
     // Check hash consistency
     let loaded_hash = loaded_store.get_blake3_hash();
@@ -239,41 +239,18 @@ fn test_save_load_comprehensive() {
         .unwrap();
 
     assert_eq!(
-        loaded_obj
-            .basic("p_string")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_string").unwrap().value().as_ref(),
         "Hello String"
     );
     assert_eq!(
-        loaded_obj
-            .basic("p_number")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_number").unwrap().value().as_ref(),
         "12345"
     );
     assert_eq!(
-        loaded_obj
-            .basic("p_file")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_file").unwrap().value().as_ref(),
         "test.txt"
     );
-    assert_eq!(
-        loaded_obj
-            .basic("p_choice")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
-        "B"
-    );
+    assert_eq!(loaded_obj.basic("p_choice").unwrap().value().as_ref(), "B");
 
     // Verify Struct
     let s_basic_path = StorePath::builder(obj_key.clone())
@@ -281,12 +258,7 @@ fn test_save_load_comprehensive() {
         .struct_item("s_basic")
         .build();
     assert_eq!(
-        loaded_store
-            .basic(&s_basic_path)
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_store.basic(&s_basic_path).unwrap().value().as_ref(),
         "Struct Value"
     );
 
@@ -297,12 +269,7 @@ fn test_save_load_comprehensive() {
         .struct_item("s_basic")
         .build();
     assert_eq!(
-        loaded_store
-            .basic(&m_basic_path)
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_store.basic(&m_basic_path).unwrap().value().as_ref(),
         "Map Struct Value"
     );
 

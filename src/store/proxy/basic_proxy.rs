@@ -31,8 +31,8 @@ impl BasicProxy {
     }
 
     /// Returns the current value from the proxy.
-    pub fn value(&self) -> Result<ShareableString, StoreError> {
-        Ok(self.data.get())
+    pub fn value(&self) -> ShareableString {
+        self.data.get()
     }
 
     /// Sets a new value in the proxy.

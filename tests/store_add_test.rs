@@ -35,13 +35,13 @@ fn test_add_object_from_another_store() {
         .property("prop1")
         .build();
     let basic2 = store2.basic(&prop_path2).unwrap();
-    assert_eq!(basic2.value().unwrap().as_str(), "Hello from Store 1");
+    assert_eq!(basic2.value().as_str(), "Hello from Store 1");
 
     // Verify they are independent
     let mut basic2_mut = store2.basic(&prop_path2).unwrap();
     basic2_mut.set_value("Changed in Store 2");
 
     let basic1_after = store1.basic(&prop_path).unwrap();
-    assert_eq!(basic1_after.value().unwrap().as_str(), "Hello from Store 1");
-    assert_eq!(basic2_mut.value().unwrap().as_str(), "Changed in Store 2");
+    assert_eq!(basic1_after.value().as_str(), "Hello from Store 1");
+    assert_eq!(basic2_mut.value().as_str(), "Changed in Store 2");
 }

@@ -52,8 +52,8 @@ fn main() {
 
     // Pull the latest data from the store.
     observer_proxy.pull().unwrap();
-    assert_eq!(observer_proxy.value().unwrap().as_str(), "john doe updated");
+    assert_eq!(observer_proxy.value().as_str(), "john doe updated");
 
-    println!("Username: {}", observer_proxy.value().unwrap());
-    println!("Age: {}", age_proxy.value().unwrap());
+    println!("Username: {}", observer_proxy.value());
+    println!("Age: {}", age_proxy.value());
 }
