@@ -4,13 +4,21 @@ use crate::shareable_string::ShareableString;
 use serde::{Deserialize, Serialize};
 
 /// Validates that a key is not empty and only contains valid characters.
-/// Valid characters are lowercase a-z, digits 0-9, and underscores.
+/// The first character must be lowercase a-z.
+/// Remaining characters may be lowercase a-z, digits 0-9, and underscores.
 fn validate_key(key: &ShareableString) -> Result<(), StoreError> {
     let s = key.as_str();
     if s.is_empty() {
         return Err(StoreError::KeyEmpty);
     }
-    for c in s.chars() {
+
+    let mut chars = s.chars();
+    let first = chars.next().expect("key was checked to be non-empty");
+    if !first.is_ascii_lowercase() {
+        return Err(StoreError::KeyInvalidCharacter(s.to_string()));
+    }
+
+    for c in chars {
         if !c.is_ascii_lowercase() && !c.is_ascii_digit() && c != '_' {
             return Err(StoreError::KeyInvalidCharacter(s.to_string()));
         }
