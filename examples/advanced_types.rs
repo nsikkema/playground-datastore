@@ -107,8 +107,7 @@ fn main() {
     table_proxy.set_cell(0, "quantity", "50").unwrap();
 
     table_proxy.append_row();
-    table_proxy.set_cell(1, "item_id", "widget_b").unwrap();
-    table_proxy.set_cell(1, "quantity", "25").unwrap();
+    table_proxy.set_row(1, vec!["widget_b", "25"]).unwrap();
 
     table_proxy.push().unwrap();
 

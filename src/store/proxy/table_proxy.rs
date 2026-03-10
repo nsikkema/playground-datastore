@@ -73,6 +73,19 @@ impl TableProxy {
         self.data
             .set_cell(row_index, column_key.as_str(), new_value)
     }
+
+    /// Sets the values of a row in the table.
+    pub fn set_row<S: Into<ShareableString>>(
+        &mut self,
+        row_index: usize,
+        values: Vec<S>,
+    ) -> Result<(), StoreError> {
+        let values: Vec<ShareableString> = values
+            .into_iter()
+            .map(|v| self.store.launder(v.into()))
+            .collect();
+        self.data.set_row(row_index, values)
+    }
 }
 
 impl ProxyStoreTrait for TableProxy {

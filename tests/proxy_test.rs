@@ -82,6 +82,10 @@ fn test_complex_proxy_structure() {
         .set_cell(0, "col1", ShareableString::from("new_value"))
         .unwrap();
 
+
+    table_proxy.append_row();
+    table_proxy.set_row(1, vec!("new_value")).unwrap();
+
     // 9. Check change detection
     assert!(basic_proxy.has_changed());
     assert!(table_proxy.has_changed());
@@ -99,9 +103,13 @@ fn test_complex_proxy_structure() {
     assert_eq!(basic_proxy2.value().unwrap().as_ref(), "100");
 
     let table_proxy2 = store.table(&table_path).unwrap();
-    assert_eq!(table_proxy2.row_count(), 1);
+    assert_eq!(table_proxy2.row_count(), 2);
     assert_eq!(
         table_proxy2.row(0).unwrap().get("col1").unwrap().as_ref(),
+        "new_value"
+    );
+    assert_eq!(
+        table_proxy2.row(1).unwrap().get("col1").unwrap().as_ref(),
         "new_value"
     );
 
