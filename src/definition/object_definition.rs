@@ -87,16 +87,20 @@ impl ObjectDefinitionBuilder {
     /// Returns a new builder with the property inserted.
     ///
     /// This method will overwrite existing properties with the same keys.
-    pub fn with_inserted(mut self, key: StoreKey, property: PropertyDefinition) -> Self {
-        self.insert(key, property);
+    pub fn with_inserted<K: Into<StoreKey>>(
+        mut self,
+        key: K,
+        property: PropertyDefinition,
+    ) -> Self {
+        self.insert(key.into(), property);
         self
     }
 
     /// Inserts a property into the current builder.
     ///
     /// This method will overwrite existing properties with the same keys.
-    pub fn insert(&mut self, key: StoreKey, property: PropertyDefinition) {
-        let key = key.key;
+    pub fn insert<K: Into<StoreKey>>(&mut self, key: K, property: PropertyDefinition) {
+        let key = key.into().key;
         self.properties.insert(key, property);
     }
 

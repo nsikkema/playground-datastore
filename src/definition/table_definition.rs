@@ -14,13 +14,13 @@ pub struct TableDefinition {
 
 impl TableDefinition {
     /// Creates a new `TableDefinition` with a description and a list of columns.
-    pub fn new<S1: Into<ShareableString>>(
+    pub fn new<S1: Into<ShareableString>, K: Into<StoreKey>>(
         description: S1,
-        columns: Vec<(StoreKey, BasicDefinition)>,
+        columns: Vec<(K, BasicDefinition)>,
     ) -> Self {
         let mut cols = BTreeMap::new();
         for (id, item) in columns {
-            let key = id.key;
+            let key = id.into().key;
             cols.insert(key, item);
         }
         Self {

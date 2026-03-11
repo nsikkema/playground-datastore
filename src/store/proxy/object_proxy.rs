@@ -3,6 +3,7 @@ use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
 use crate::store::{
     BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, StorePath, TableProxy,
+    TreePrint,
 };
 
 /// A proxy for a top-level object in the store.
@@ -99,6 +100,13 @@ impl ObjectProxy {
     /// Returns all property keys in the object.
     pub fn all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
         Ok(self.keys.clone())
+    }
+
+    /// Prints the object as a tree for debugging.
+    pub fn tree_print(&self) {
+        if let Ok(container) = self.store.get_container_internal(&self.path) {
+            container.tree_print(self.path.object_key().as_str(), "", true);
+        }
     }
 }
 

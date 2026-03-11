@@ -1,7 +1,7 @@
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
-use crate::store::traits::CommonStoreTraitInternal;
+use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
 use crate::{StoreError, StoreKey};
 use parking_lot::RwLock;
@@ -151,12 +151,12 @@ impl Store {
     }
 
     /// Creates a new object in the store and returns a proxy to it.
-    pub fn create_object(
+    pub fn create_object<K: Into<StoreKey>>(
         &self,
-        object_key: StoreKey,
+        object_key: K,
         definition: &ObjectDefinition,
     ) -> Result<ObjectProxy, StoreError> {
-        let object_key = object_key.key;
+        let object_key = object_key.into().key;
         let object_key = self.launder(object_key);
         self.internal.create_object(&object_key, definition)?;
         let path = StorePath::builder(object_key).build();
@@ -302,9 +302,9 @@ impl Store {
     }
 
     /// Deletes the object with the specified key.
-    pub fn delete_object<K: Into<StoreKey>>(&self, object_key: K) -> Result<(), StoreError> {
-        let object_key = object_key.into().key;
-        self.internal.delete_object(&object_key)
+    pub fn delete_object(&self, object_key: StoreKey) -> Result<(), StoreError> {
+        let object_key = &object_key.key;
+        self.internal.delete_object(object_key)
     }
 
     /// Returns a list of all object keys in the store.
@@ -371,20 +371,35 @@ impl Store {
     }
 
     /// Copies an object from another store.
-    pub fn copy_object<S1: Into<ShareableString>, S2: Into<ShareableString>>(
+    pub fn copy_object(
         &self,
-        object_key: S1,
+        object_key: StoreKey,
         source_store: &Store,
-        source_object_key: S2,
+        source_object_key: StoreKey,
     ) -> Result<ObjectProxy, StoreError> {
-        let object_key = self.launder(object_key.into());
-        let source_object_key = source_object_key.into();
+        let object_key = self.launder(object_key.key);
+        let source_object_key = source_object_key.key;
         let container = source_store.internal.get_object(&source_object_key)?;
         let container = container.launder(&self.internal.string_store);
 
         self.internal.add_object(&object_key, &container)?;
         let path = StorePath::builder(object_key).build();
         self.object(&path)
+    }
+
+    /// Prints the entire store as a tree for debugging.
+    pub fn tree_print(&self) {
+        println!("Store");
+        let objects = self.internal.objects.read();
+        let mut keys: Vec<_> = objects.keys().collect();
+        keys.sort();
+
+        for (i, key) in keys.iter().enumerate() {
+            let last = i == keys.len() - 1;
+            if let Some(container) = objects.get(*key) {
+                container.tree_print(key.as_str(), "", last);
+            }
+        }
     }
 }
 
@@ -411,7 +426,7 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
 
 impl Segment {
     /// Returns the key associated with the segment.
-    fn key(&self) -> &ShareableString {
+    pub(crate) fn key(&self) -> &ShareableString {
         match self {
             Segment::Property(key) => key,
             Segment::MapKey(key) => key,

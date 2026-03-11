@@ -1,7 +1,7 @@
 use crate::StoreError;
 use crate::definition::TableDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::store::{CommonStoreTraitInternal, StoreHashContainer};
+use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -176,5 +176,35 @@ impl CommonStoreTraitInternal for Table {
 
     fn clear_hash(&mut self) {
         self.blake3_hash.clear()
+    }
+}
+
+impl TreePrint for Table {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        println!(
+            "{}{}{}: [Table, {} rows] ({})",
+            prefix,
+            Self::branch_char(last),
+            label,
+            self.rows.len(),
+            self.definition.description()
+        );
+        let next_prefix = Self::next_prefix(prefix, last);
+        for (i, row) in self.rows.iter().enumerate() {
+            let row_last = i == self.rows.len() - 1;
+            println!("{}{}Row {}", next_prefix, Self::branch_char(row_last), i);
+            let row_prefix = Self::next_prefix(&next_prefix, row_last);
+            let keys: Vec<_> = row.keys().collect();
+            for (j, key) in keys.iter().enumerate() {
+                let cell_last = j == keys.len() - 1;
+                println!(
+                    "{}{}{}: {}",
+                    row_prefix,
+                    Self::branch_char(cell_last),
+                    key,
+                    row.get(*key).unwrap()
+                );
+            }
+        }
     }
 }

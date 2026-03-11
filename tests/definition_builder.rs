@@ -2,17 +2,17 @@ use datastore::definition::{
     BasicDefinition, ObjectDefinition, ObjectDefinitionBuilder, PropertyDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
-use datastore::{StoreError, StoreKey};
+use datastore::{StoreError, StoreKey, store_key};
 
 #[test]
 fn test_object_builder_pattern() {
     let obj_def = ObjectDefinition::builder("Test Object")
         .with_inserted(
-            "prop1".try_into().unwrap(),
+            store_key!("prop1"),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("String prop")),
         )
         .with_inserted(
-            "prop2".try_into().unwrap(),
+            store_key!("prop2"),
             PropertyDefinition::new(
                 "Property 2",
                 BasicDefinition::new_number_with_default("Number prop", "0"),
@@ -27,7 +27,7 @@ fn test_object_builder_pattern() {
 fn test_object_inheritance() {
     let parent_def = ObjectDefinition::builder("Parent")
         .with_inserted(
-            "prop1".try_into().unwrap(),
+            store_key!("prop1"),
             PropertyDefinition::new("P1", BasicDefinition::new_string_with_default("D1", "V1")),
         )
         .finish();
@@ -37,7 +37,7 @@ fn test_object_inheritance() {
 
     let mut builder = parent_def.new_inherit("Child");
     builder.insert(
-        "prop2".try_into().unwrap(),
+        store_key!("prop2"),
         PropertyDefinition::new("P2", BasicDefinition::new_string_with_default("D2", "V2")),
     );
 
@@ -72,7 +72,7 @@ fn test_invalid_keys() {
 fn test_object_definition_immutability() {
     let obj_def = ObjectDefinition::builder("Test Object")
         .with_inserted(
-            "prop1".try_into().unwrap(),
+            store_key!("prop1"),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("String prop")),
         )
         .finish();

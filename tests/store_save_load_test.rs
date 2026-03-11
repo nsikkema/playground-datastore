@@ -4,15 +4,16 @@ use datastore::definition::{
 };
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store, StorePath};
+use datastore::store_key;
 use std::fs;
 
 #[test]
 fn test_save_load_file() {
     let store = Store::new(SharedStringStore::new());
-    let obj_key: datastore::StoreKey = "my_object".into();
+    let obj_key = store_key!("my_object");
     let def = ObjectDefinition::builder("My Test Object")
         .with_inserted(
-            "prop1".try_into().unwrap(),
+            store_key!("prop1"),
             PropertyDefinition::new("Property 1", BasicDefinition::new_string("A string")),
         )
         .finish();
@@ -54,7 +55,7 @@ fn test_save_load_file() {
     let loaded_basic = loaded_store
         .basic(&prop_path)
         .expect("Could not find property in loaded store");
-    assert_eq!(loaded_basic.value().unwrap().as_str(), "Saved data");
+    assert_eq!(loaded_basic.value().as_str(), "Saved data");
 
     // Check hash consistency
     let loaded_hash = loaded_store.get_blake3_hash();
@@ -73,11 +74,11 @@ fn test_save_load_comprehensive() {
         "Table",
         vec![
             (
-                "col_str".try_into().unwrap(),
+                store_key!("col_str"),
                 BasicDefinition::new_string("String col"),
             ),
             (
-                "col_num".try_into().unwrap(),
+                store_key!("col_num"),
                 BasicDefinition::new_number("Number col"),
             ),
         ],
@@ -87,11 +88,11 @@ fn test_save_load_comprehensive() {
         "Struct",
         vec![
             (
-                "s_basic".try_into().unwrap(),
+                store_key!("s_basic"),
                 StructItemDefinition::Basic(BasicDefinition::new_string("Struct basic")),
             ),
             (
-                "s_table".try_into().unwrap(),
+                store_key!("s_table"),
                 StructItemDefinition::Table(table_def.clone()),
             ),
         ],
@@ -102,22 +103,22 @@ fn test_save_load_comprehensive() {
     // 2. Define Object with all types
     let obj_def = ObjectDefinition::builder("Comprehensive Object")
         .with_inserted(
-            "p_string".try_into().unwrap(),
+            store_key!("p_string"),
             PropertyDefinition::new("String", BasicDefinition::new_string("S")),
         )
         .with_inserted(
-            "p_number".try_into().unwrap(),
+            store_key!("p_number"),
             PropertyDefinition::new("Number", BasicDefinition::new_number("N")),
         )
         .with_inserted(
-            "p_file".try_into().unwrap(),
+            store_key!("p_file"),
             PropertyDefinition::new(
                 "File",
                 BasicDefinition::new_file("F", FileDefinition::new("*.txt")),
             ),
         )
         .with_inserted(
-            "p_choice".try_into().unwrap(),
+            store_key!("p_choice"),
             PropertyDefinition::new(
                 "Choice",
                 BasicDefinition::new_choice(
@@ -127,20 +128,17 @@ fn test_save_load_comprehensive() {
             ),
         )
         .with_inserted(
-            "p_struct".try_into().unwrap(),
+            store_key!("p_struct"),
             PropertyDefinition::new("Struct", struct_def),
         )
         .with_inserted(
-            "p_table".try_into().unwrap(),
+            store_key!("p_table"),
             PropertyDefinition::new("Table", table_def),
         )
-        .with_inserted(
-            "p_map".try_into().unwrap(),
-            PropertyDefinition::new("Map", map_def),
-        )
+        .with_inserted(store_key!("p_map"), PropertyDefinition::new("Map", map_def))
         .finish();
 
-    let obj_key: datastore::StoreKey = "comp_obj".into();
+    let obj_key: datastore::StoreKey = store_key!("comp_obj").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     // 3. Populate data
@@ -239,41 +237,18 @@ fn test_save_load_comprehensive() {
         .unwrap();
 
     assert_eq!(
-        loaded_obj
-            .basic("p_string")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_string").unwrap().value().as_ref(),
         "Hello String"
     );
     assert_eq!(
-        loaded_obj
-            .basic("p_number")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_number").unwrap().value().as_ref(),
         "12345"
     );
     assert_eq!(
-        loaded_obj
-            .basic("p_file")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_obj.basic("p_file").unwrap().value().as_ref(),
         "test.txt"
     );
-    assert_eq!(
-        loaded_obj
-            .basic("p_choice")
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
-        "B"
-    );
+    assert_eq!(loaded_obj.basic("p_choice").unwrap().value().as_ref(), "B");
 
     // Verify Struct
     let s_basic_path = StorePath::builder(obj_key.clone())
@@ -281,12 +256,7 @@ fn test_save_load_comprehensive() {
         .struct_item("s_basic")
         .build();
     assert_eq!(
-        loaded_store
-            .basic(&s_basic_path)
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_store.basic(&s_basic_path).unwrap().value().as_ref(),
         "Struct Value"
     );
 
@@ -297,12 +267,7 @@ fn test_save_load_comprehensive() {
         .struct_item("s_basic")
         .build();
     assert_eq!(
-        loaded_store
-            .basic(&m_basic_path)
-            .unwrap()
-            .value()
-            .unwrap()
-            .as_ref(),
+        loaded_store.basic(&m_basic_path).unwrap().value().as_ref(),
         "Map Struct Value"
     );
 
@@ -331,7 +296,7 @@ fn test_save_load_comprehensive() {
 #[test]
 fn test_launder_consistency_after_load() {
     let store = Store::new(SharedStringStore::new());
-    let obj_key = "test_obj".try_into().unwrap();
+    let obj_key = store_key!("test_obj");
     let def = ObjectDefinition::builder("Test").finish();
     store.create_object(obj_key, &def).unwrap();
 

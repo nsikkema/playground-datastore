@@ -2,8 +2,8 @@ use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
     TableDefinition,
 };
-use datastore::path;
 use datastore::store::{ProxyStoreTrait, Store, StorePath};
+use datastore::{path, store_key};
 
 fn main() {
     // 1. Create a Store
@@ -14,11 +14,8 @@ fn main() {
     let address_def = StructDefinition::new(
         "Address",
         vec![
-            (
-                "street".try_into().unwrap(),
-                BasicDefinition::new_string(""),
-            ),
-            ("city".try_into().unwrap(), BasicDefinition::new_string("")),
+            (store_key!("street"), BasicDefinition::new_string("")),
+            (store_key!("city"), BasicDefinition::new_string("")),
         ],
     );
 
@@ -31,14 +28,8 @@ fn main() {
     let inventory_def = TableDefinition::new(
         "Inventory",
         vec![
-            (
-                "item_id".try_into().unwrap(),
-                BasicDefinition::new_string(""),
-            ),
-            (
-                "quantity".try_into().unwrap(),
-                BasicDefinition::new_number("0"),
-            ),
+            (store_key!("item_id"), BasicDefinition::new_string("")),
+            (store_key!("quantity"), BasicDefinition::new_number("0")),
         ],
     );
 
@@ -46,21 +37,21 @@ fn main() {
     let builder = ObjectDefinition::builder("Company Data");
     let company_def = builder
         .with_inserted(
-            "hq_address".try_into().unwrap(),
+            store_key!("hq_address"),
             PropertyDefinition::new("Headquarters", address_def),
         )
         .with_inserted(
-            "branches".try_into().unwrap(),
+            store_key!("branches"),
             PropertyDefinition::new("Branch Offices", contacts_def),
         )
         .with_inserted(
-            "stock".try_into().unwrap(),
+            store_key!("stock"),
             PropertyDefinition::new("Warehouse Stock", inventory_def),
         )
         .finish();
 
     store
-        .create_object("my_company".try_into().unwrap(), &company_def)
+        .create_object(store_key!("my_company"), &company_def)
         .unwrap();
 
     let mut company_proxy = store.object(&"my_company".into()).unwrap();
@@ -74,7 +65,7 @@ fn main() {
     street_proxy.set_value("123 Main St");
     street_proxy.push().unwrap();
 
-    println!("HQ Street: {}", street_proxy.value().unwrap());
+    println!("HQ Street: {}", street_proxy.value());
 
     // 7. Interact with the Map
     // Maps allows inserting new entries that follow the defined Struct schema.
@@ -90,10 +81,7 @@ fn main() {
     london_city_proxy.set_value("London");
     london_city_proxy.push().unwrap();
 
-    println!(
-        "Branch 'london' city: {}",
-        london_city_proxy.value().unwrap()
-    );
+    println!("Branch 'london' city: {}", london_city_proxy.value());
 
     // 8. Interact with the Table
     let mut table_proxy = company_proxy.table("stock").unwrap();
@@ -116,4 +104,7 @@ fn main() {
             i, row["item_id"], row["quantity"]
         );
     }
+
+    println!("\nFull Store Tree Print:");
+    store.tree_print();
 }

@@ -1,10 +1,10 @@
-use datastore::StoreKey;
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, PropertyDefinitionType, StructDefinition,
     StructItemDefinition, TableDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
+use datastore::{StoreKey, store_key};
 
 #[test]
 fn test_basic_definition_comprehensive() {
@@ -35,14 +35,8 @@ fn test_table_definition_comprehensive() {
     let table_def = TableDefinition::new(
         "Table Desc",
         vec![
-            (
-                "col1".try_into().unwrap(),
-                BasicDefinition::new_string("C1"),
-            ),
-            (
-                "col2".try_into().unwrap(),
-                BasicDefinition::new_number("C2"),
-            ),
+            (store_key!("col1"), BasicDefinition::new_string("C1")),
+            (store_key!("col2"), BasicDefinition::new_number("C2")),
         ],
     );
 
@@ -66,11 +60,11 @@ fn test_struct_definition_comprehensive() {
         "Struct Desc",
         vec![
             (
-                "f1".try_into().unwrap(),
+                store_key!("f1"),
                 StructItemDefinition::Basic(BasicDefinition::new_string("F1")),
             ),
             (
-                "f2".try_into().unwrap(),
+                store_key!("f2"),
                 StructItemDefinition::Table(TableDefinition::new(
                     "T1",
                     Vec::<(StoreKey, BasicDefinition)>::new(),
@@ -117,11 +111,11 @@ fn test_property_definition_comprehensive() {
 fn test_object_definition_comprehensive() {
     let obj_def = ObjectDefinition::builder("Obj Desc")
         .with_inserted(
-            "p1".try_into().unwrap(),
+            store_key!("p1"),
             PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
         )
         .with_inserted(
-            "p2".try_into().unwrap(),
+            store_key!("p2"),
             PropertyDefinition::new("P2", BasicDefinition::new_number("D2")),
         )
         .finish();
@@ -151,7 +145,7 @@ fn test_launder_comprehensive() {
     // Test TableDefinition launder
     let table_def = TableDefinition::new(
         "Table",
-        vec![("col".try_into().unwrap(), BasicDefinition::new_string("C"))],
+        vec![(store_key!("col"), BasicDefinition::new_string("C"))],
     );
     let laundered_table = table_def.launder(&store);
     assert_eq!(laundered_table.description(), table_def.description());
@@ -160,10 +154,7 @@ fn test_launder_comprehensive() {
     // Test StructDefinition launder
     let struct_def = StructDefinition::new(
         "Struct",
-        vec![(
-            "field".try_into().unwrap(),
-            BasicDefinition::new_string("F"),
-        )],
+        vec![(store_key!("field"), BasicDefinition::new_string("F"))],
     );
     let laundered_struct = struct_def.launder(&store);
     assert_eq!(laundered_struct.description(), struct_def.description());
@@ -181,7 +172,7 @@ fn test_launder_comprehensive() {
 
     // Test ObjectDefinition launder
     let obj_def = ObjectDefinition::builder("Obj")
-        .with_inserted("prop".try_into().unwrap(), prop_def)
+        .with_inserted(store_key!("prop"), prop_def)
         .finish();
     let laundered_obj = obj_def.launder(&store);
     assert_eq!(laundered_obj.description(), obj_def.description());

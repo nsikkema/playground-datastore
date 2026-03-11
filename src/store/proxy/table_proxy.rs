@@ -2,7 +2,7 @@ use crate::StoreError;
 use crate::definition::TableDefinition;
 use crate::shareable_string::ShareableString;
 use crate::store::{
-    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath, Table,
+    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath, Table, TreePrint,
 };
 use std::collections::BTreeMap;
 
@@ -85,6 +85,17 @@ impl TableProxy {
             .map(|v| self.store.launder(v.into()))
             .collect();
         self.data.set_row(row_index, values)
+    }
+
+    /// Prints the table as a tree for debugging.
+    pub fn tree_print(&self) {
+        let label = self
+            .path
+            .segments()
+            .last()
+            .map(|s| s.key().as_str())
+            .unwrap_or_else(|| self.path.object_key().as_str());
+        self.data.tree_print(label, "", true);
     }
 }
 
