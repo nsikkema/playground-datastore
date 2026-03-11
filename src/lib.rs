@@ -50,11 +50,13 @@
 
 pub mod definition;
 pub mod key;
+mod path;
 pub mod shareable_string;
+pub mod static_store;
 pub mod store;
 
 pub use crate::key::{ConstStoreKey, StoreKey};
-pub use crate::store::StorePath;
+pub use crate::path::*;
 
 use crate::shareable_string::ShareableString;
 use std::fmt::{Display, Formatter};

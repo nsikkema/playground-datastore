@@ -1,9 +1,9 @@
-use crate::StoreError;
 use crate::shareable_string::ShareableString;
 use crate::store::{
     Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
-    StorePath, TreePrint,
+    TreePrint,
 };
+use crate::{StoreError, StorePath};
 
 /// A proxy for a container in the store.
 pub struct ContainerProxy {

@@ -1,6 +1,6 @@
-use super::{ObjectProxy, StorePath};
-use crate::StoreError;
+use super::ObjectProxy;
 use crate::shareable_string::ShareableString;
+use crate::{StoreError, StorePath};
 
 /// Internal trait for common store operations related to hashing.
 pub(in crate::store) trait CommonStoreTraitInternal {

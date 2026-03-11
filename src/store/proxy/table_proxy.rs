@@ -1,9 +1,9 @@
-use crate::StoreError;
 use crate::definition::TableDefinition;
 use crate::shareable_string::ShareableString;
 use crate::store::{
-    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, StorePath, Table, TreePrint,
+    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table, TreePrint,
 };
+use crate::{StoreError, StorePath};
 use std::collections::BTreeMap;
 
 /// A proxy for a table in the store.

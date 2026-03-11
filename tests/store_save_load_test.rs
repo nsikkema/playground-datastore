@@ -3,8 +3,8 @@ use datastore::definition::{
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store, StorePath};
-use datastore::store_key;
+use datastore::store::{ProxyStoreTrait, Store};
+use datastore::{StorePath, store_key};
 use std::fs;
 
 #[test]
