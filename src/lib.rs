@@ -22,8 +22,8 @@
 //!
 //! ```rust
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
-//! use datastore::store::{ProxyStoreTrait, Store, StorePath};
-//! use datastore::{path, store_key};
+//! use datastore::store::{ProxyStoreTrait, Store};
+//! use datastore::{path, store_key, StorePath};
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");

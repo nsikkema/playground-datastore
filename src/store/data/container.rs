@@ -3,6 +3,7 @@ use crate::definition::{
     MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
 };
 use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::static_store::data::{StaticMap, StaticObject, StaticProperty, StaticStruct};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -283,6 +284,137 @@ impl Container {
                     }
                 }
             }
+        }
+    }
+
+    pub(crate) fn update_from_static(
+        &mut self,
+        items: &std::collections::BTreeMap<ShareableString, StaticProperty>,
+    ) {
+        for (key, static_property) in items {
+            if let Some(item) = self.items.get_mut(key)
+                && item.matches_static(static_property)
+            {
+                item.update_from_static(static_property);
+                continue;
+            }
+
+            // If doesn't exist or type mismatch, replace it.
+            self.items
+                .insert(key.clone(), ContainerItem::from(static_property));
+        }
+        self.update_blake3_hash();
+    }
+}
+
+impl From<&StaticObject> for Container {
+    fn from(static_object: &StaticObject) -> Self {
+        let items = static_object
+            .items()
+            .iter()
+            .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
+            .collect();
+        let c = Self {
+            definition: ContainerDefinition::Object(static_object.definition().clone()),
+            items,
+            blake3_hash: StoreHashContainer::new(),
+            locked: true,
+        };
+        c.blake3_hash.set(static_object.hash());
+        c
+    }
+}
+
+impl From<&StaticStruct> for Container {
+    fn from(static_struct: &StaticStruct) -> Self {
+        let items = static_struct
+            .items()
+            .iter()
+            .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
+            .collect();
+        let c = Self {
+            definition: ContainerDefinition::Struct(static_struct.definition().clone()),
+            items,
+            blake3_hash: StoreHashContainer::new(),
+            locked: true,
+        };
+        c.blake3_hash.set(static_struct.hash());
+        c
+    }
+}
+
+impl From<&StaticMap> for Container {
+    fn from(static_map: &StaticMap) -> Self {
+        let items = static_map
+            .items()
+            .iter()
+            .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
+            .collect();
+        let c = Self {
+            definition: ContainerDefinition::Map(static_map.definition().clone()),
+            items,
+            blake3_hash: StoreHashContainer::new(),
+            locked: false,
+        };
+        c.blake3_hash.set(static_map.hash());
+        c
+    }
+}
+
+impl From<&StaticProperty> for ContainerItem {
+    fn from(static_property: &StaticProperty) -> Self {
+        match static_property {
+            StaticProperty::Basic(b) => ContainerItem::Basic(Basic::from(b)),
+            StaticProperty::Table(t) => ContainerItem::Table(Table::from(t)),
+            StaticProperty::Object(o) => ContainerItem::Container(Container::from(o)),
+            StaticProperty::Struct(s) => ContainerItem::Container(Container::from(s)),
+            StaticProperty::Map(m) => ContainerItem::Container(Container::from(m)),
+        }
+    }
+}
+
+impl ContainerItem {
+    pub(crate) fn matches_static(&self, static_property: &StaticProperty) -> bool {
+        match (self, static_property) {
+            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
+                b.definition() == sb.definition()
+            }
+            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
+                t.definition() == st.definition()
+            }
+            (ContainerItem::Container(c), StaticProperty::Object(so)) => {
+                matches!(c.definition(), ContainerDefinition::Object(def) if def == so.definition())
+            }
+            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
+                matches!(c.definition(), ContainerDefinition::Struct(def) if def == ss.definition())
+            }
+            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
+                matches!(c.definition(), ContainerDefinition::Map(def) if def == sm.definition())
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn update_from_static(&mut self, static_property: &StaticProperty) {
+        match (self, static_property) {
+            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
+                b.update_from_static(sb);
+            }
+            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
+                t.update_from_static(st);
+            }
+            (ContainerItem::Container(c), StaticProperty::Object(so)) => {
+                c.update_from_static(so.items());
+            }
+            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
+                c.update_from_static(ss.items());
+            }
+            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
+                c.update_from_static(sm.items());
+            }
+            _ => panic!(
+                "Type mismatch in update_from_static - should have been checked by matches_static"
+            ),
         }
     }
 }
