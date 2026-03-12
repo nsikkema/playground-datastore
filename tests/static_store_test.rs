@@ -124,12 +124,12 @@ fn test_update_from_static() {
     let updated_static_store = store.to_static();
 
     // Reset store to initial state (using the first static store)
-    store.update_from_static(&static_store);
+    store.sync_from_static(&static_store);
     proxy.sync().unwrap();
     assert_eq!(proxy.basic("prop1").unwrap().value().as_str(), "Initial");
 
     // Now update from the "updated" static store
-    store.update_from_static(&updated_static_store);
+    store.sync_from_static(&updated_static_store);
     proxy.sync().unwrap();
 
     // Verify that the proxy still works and reflects the update
@@ -166,7 +166,7 @@ fn test_update_from_static_definition_mismatch() {
     let static_store2 = other_store.to_static();
 
     // Update store with a static store that has a different definition for the same key
-    store.update_from_static(&static_store2);
+    store.sync_from_static(&static_store2);
 
     // Verify it was replaced
     let obj_keys = store.object_keys().unwrap();
@@ -218,7 +218,7 @@ fn test_update_from_static_does_not_remove_missing_properties() {
     let static_store = other_store.to_static();
 
     // Update original store from static store
-    store.update_from_static(&static_store);
+    store.sync_from_static(&static_store);
     store.tree_print();
 
     // Verify prop1 was updated
@@ -275,7 +275,7 @@ fn test_update_from_static_does_not_remove_missing_objects() {
     let static_store = other_store.to_static();
 
     // Update original store from static store
-    store.update_from_static(&static_store);
+    store.merge_from_static(&static_store);
     store.tree_print();
 
     // Verify object1 was updated
@@ -310,7 +310,7 @@ fn test_update_from_static_add_object() {
     let static_store = other_store.to_static();
 
     // Update store (which is empty) from static store
-    store.update_from_static(&static_store);
+    store.sync_from_static(&static_store);
 
     // Verify it was added
     let obj_keys = store.object_keys().unwrap();

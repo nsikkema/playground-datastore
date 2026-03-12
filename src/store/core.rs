@@ -428,8 +428,16 @@ impl Store {
         }
     }
 
-    pub fn update_from_static(&self, static_store: &StaticStore) {
+    fn update_from_static_internal(&self, static_store: &StaticStore, delete_missing: bool) {
         let mut objects = self.internal.objects.write();
+
+        if delete_missing {
+            for key in objects.keys().cloned().collect::<Vec<_>>() {
+                if !static_store.objects().contains_key(&key) {
+                    objects.remove(&key);
+                }
+            }
+        }
 
         for (key, static_object) in static_store.objects() {
             let laundered_key = self.launder(key.clone());
@@ -448,6 +456,14 @@ impl Store {
         }
 
         self.internal.update_blake3_hash(&objects);
+    }
+
+    pub fn sync_from_static(&self, static_store: &StaticStore) {
+        self.update_from_static_internal(static_store, true);
+    }
+
+    pub fn merge_from_static(&self, static_store: &StaticStore) {
+        self.update_from_static_internal(static_store, false);
     }
 }
 
