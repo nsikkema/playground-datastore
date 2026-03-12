@@ -5,11 +5,10 @@ use crate::definition::{
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::{StaticMap, StaticObject, StaticProperty, StaticStruct};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// An item stored within a `Container`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub(crate) enum ContainerItem {
     /// A basic data value.
     Basic(Basic),
@@ -20,7 +19,7 @@ pub(crate) enum ContainerItem {
 }
 
 /// The definition for a `Container`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum ContainerDefinition {
     /// A struct definition.
     Struct(StructDefinition),
@@ -38,12 +37,10 @@ impl Default for ContainerDefinition {
 
 /// A container that holds multiple `ContainerItem`s.
 /// It can represent a struct, a map, or a top-level object.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub(crate) struct Container {
-    #[serde(skip)]
     definition: ContainerDefinition,
     items: HashMap<ShareableString, ContainerItem>,
-    #[serde(skip)]
     blake3_hash: StoreHashContainer,
     locked: bool,
 }
@@ -197,92 +194,6 @@ impl Container {
                 ContainerItem::Basic(item) => item.clear_hash(),
                 ContainerItem::Table(item) => item.clear_hash(),
                 ContainerItem::Container(item) => item.clear_hash_all(),
-            }
-        }
-    }
-
-    /// Updates the hash of this container and all nested items.
-    pub(crate) fn update_blake3_hash_all(&mut self) {
-        for item in self.items.values_mut() {
-            match item {
-                ContainerItem::Basic(item) => item.update_blake3_hash(),
-                ContainerItem::Table(item) => item.update_blake3_hash(),
-                ContainerItem::Container(item) => item.update_blake3_hash_all(),
-            }
-        }
-        self.update_blake3_hash();
-    }
-
-    /// Restores the definition after deserialization.
-    pub(crate) fn restore_definition(&mut self, definition: ContainerDefinition) {
-        self.definition = definition.clone();
-        match definition {
-            ContainerDefinition::Struct(s) => {
-                for (key, item) in self.items.iter_mut() {
-                    if let Some(item_def) = s.get(key) {
-                        match (item, item_def) {
-                            (ContainerItem::Basic(b), StructItemDefinition::Basic(bd)) => {
-                                b.restore_definition(bd.clone());
-                            }
-                            (ContainerItem::Table(t), StructItemDefinition::Table(td)) => {
-                                t.restore_definition(td.clone());
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            ContainerDefinition::Map(m) => {
-                let item_def = m.item_type();
-                for item in self.items.values_mut() {
-                    if let ContainerItem::Container(c) = item {
-                        c.restore_definition(ContainerDefinition::Struct(item_def.clone()));
-                    }
-                }
-            }
-            ContainerDefinition::Object(o) => {
-                for (key, item) in self.items.iter_mut() {
-                    if let Some(prop_def) = o.get(key) {
-                        match item {
-                            ContainerItem::Basic(b) => {
-                                if let PropertyDefinitionType::Basic(bd) = prop_def.item_type() {
-                                    b.restore_definition(bd.clone());
-                                } else {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Basic",
-                                        key.as_str()
-                                    );
-                                }
-                            }
-                            ContainerItem::Table(t) => {
-                                if let PropertyDefinitionType::Table(td) = prop_def.item_type() {
-                                    t.restore_definition(td.clone());
-                                } else {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Table",
-                                        key.as_str()
-                                    );
-                                }
-                            }
-                            ContainerItem::Container(c) => match prop_def.item_type() {
-                                PropertyDefinitionType::Struct(sd) => {
-                                    c.restore_definition(ContainerDefinition::Struct(sd.clone()));
-                                }
-                                PropertyDefinitionType::Map(md) => {
-                                    c.restore_definition(ContainerDefinition::Map(md.clone()));
-                                }
-                                _ => {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Struct or Map",
-                                        key.as_str()
-                                    );
-                                }
-                            },
-                        }
-                    } else {
-                        panic!("Key {} not found in object definition", key.as_str());
-                    }
-                }
             }
         }
     }

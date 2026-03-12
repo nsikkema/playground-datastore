@@ -2,15 +2,12 @@ use crate::definition::BasicDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticBasic;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
-use serde::{Deserialize, Serialize};
 
 /// Represents a basic data value in the store (String, Number, etc.).
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Basic {
-    #[serde(skip)]
     definition: BasicDefinition,
     value: ShareableString,
-    #[serde(skip)]
     blake3_hash: StoreHashContainer,
 }
 
@@ -51,11 +48,6 @@ impl Basic {
     pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
         self.update_blake3_hash();
-    }
-
-    /// Restores the definition after deserialization.
-    pub(crate) fn restore_definition(&mut self, definition: BasicDefinition) {
-        self.definition = definition;
     }
 
     pub(crate) fn update_from_static(&mut self, static_basic: &StaticBasic) {
