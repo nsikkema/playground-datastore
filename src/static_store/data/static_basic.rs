@@ -1,0 +1,73 @@
+use crate::definition::BasicDefinition;
+use crate::shareable_string::ShareableString;
+use crate::store::data::Basic;
+use crate::store::{CommonStoreTraitInternal, TreePrint};
+use serde::{Deserialize, Serialize};
+
+/// Represents a basic data value in the static store.
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct StaticBasic {
+    definition: BasicDefinition,
+    value: ShareableString,
+    hash: [u8; 32],
+}
+
+impl StaticBasic {
+    pub fn new(definition: BasicDefinition, value: ShareableString) -> Self {
+        let mut s = Self {
+            definition,
+            value,
+            hash: [0u8; 32],
+        };
+        s.update_hash();
+        s
+    }
+
+    fn update_hash(&mut self) {
+        let mut h = blake3::Hasher::new();
+
+        // Domain separation for this node/type.
+        h.update(&[0x01]);
+        h.update(b"Basic");
+
+        h.update(&self.value.current_blake3_hash());
+
+        let digest = h.finalize();
+        self.hash = *digest.as_bytes();
+    }
+
+    pub fn value(&self) -> &ShareableString {
+        &self.value
+    }
+
+    pub fn definition(&self) -> &BasicDefinition {
+        &self.definition
+    }
+
+    pub fn hash(&self) -> [u8; 32] {
+        self.hash
+    }
+}
+
+impl From<&Basic> for StaticBasic {
+    fn from(basic: &Basic) -> Self {
+        Self {
+            definition: basic.definition().clone(),
+            value: basic.get(),
+            hash: basic.current_blake3_hash(),
+        }
+    }
+}
+
+impl TreePrint for StaticBasic {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        println!(
+            "{}{}{}: {} ({})",
+            prefix,
+            Self::branch_char(last),
+            label,
+            self.value,
+            self.definition.description()
+        );
+    }
+}

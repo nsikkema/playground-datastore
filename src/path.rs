@@ -235,14 +235,14 @@ impl StorePath {
 #[macro_export]
 macro_rules! path {
     ($obj:tt $(/ $seg:tt)+) => {{
-        let mut p = $crate::store::StorePath::new($obj);
+        let mut p = $crate::StorePath::new($obj);
         $(
             p = p.property($seg);
         )+
         p
     }};
     ($obj:tt) => {
-        $crate::store::StorePath::new($obj)
+        $crate::StorePath::new($obj)
     };
 }
 
@@ -453,6 +453,7 @@ impl StorePathBuilder<AnyState> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use crate::StorePath;
 
     #[test]
     fn test_valid_paths() {

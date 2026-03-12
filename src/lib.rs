@@ -22,8 +22,8 @@
 //!
 //! ```rust
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
-//! use datastore::store::{ProxyStoreTrait, Store, StorePath};
-//! use datastore::{path, store_key};
+//! use datastore::store::{ProxyStoreTrait, Store};
+//! use datastore::{path, store_key, StorePath};
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
@@ -50,11 +50,13 @@
 
 pub mod definition;
 pub mod key;
+mod path;
 pub mod shareable_string;
+pub mod static_store;
 pub mod store;
 
 pub use crate::key::{ConstStoreKey, StoreKey};
-pub use crate::store::StorePath;
+pub use crate::path::*;
 
 use crate::shareable_string::ShareableString;
 use std::fmt::{Display, Formatter};

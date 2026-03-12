@@ -1,9 +1,10 @@
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::static_store::StaticStore;
 use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
 use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
-use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, Segment, StorePath, TableProxy};
-use crate::{StoreError, StoreKey};
+use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
+use crate::{Segment, StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
@@ -400,6 +401,53 @@ impl Store {
                 container.tree_print(key.as_str(), "", last);
             }
         }
+    }
+
+    pub fn to_static(&self) -> StaticStore {
+        StaticStore::from(self)
+    }
+
+    pub fn new_from_static(static_store: &StaticStore) -> Self {
+        let string_store = SharedStringStore::new();
+        let mut objects = HashMap::new();
+        for (key, static_object) in static_store.objects() {
+            let key = string_store.launder(key.clone());
+            let container = Container::from(static_object);
+            let container = container.launder(&string_store);
+            objects.insert(key, container);
+        }
+
+        let internal = StoreInternal {
+            objects: RwLock::new(objects),
+            string_store,
+            blake3_hash: RwLock::new(static_store.get_blake3_hash()),
+        };
+
+        Store {
+            internal: Arc::new(internal),
+        }
+    }
+
+    pub fn update_from_static(&self, static_store: &StaticStore) {
+        let mut objects = self.internal.objects.write();
+
+        for (key, static_object) in static_store.objects() {
+            let laundered_key = self.launder(key.clone());
+            if let Some(container) = objects.get_mut(&laundered_key)
+                && let ContainerDefinition::Object(def) = container.definition()
+                && def == static_object.definition()
+            {
+                container.update_from_static(static_object.items());
+                continue;
+            }
+
+            // If doesn't exist or definition mismatch, replace/add
+            let container = Container::from(static_object);
+            let container = container.launder(&self.internal.string_store);
+            objects.insert(laundered_key, container);
+        }
+
+        self.internal.update_blake3_hash(&objects);
     }
 }
 

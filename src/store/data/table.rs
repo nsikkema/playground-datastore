@@ -1,6 +1,7 @@
 use crate::StoreError;
 use crate::definition::TableDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::static_store::data::StaticTable;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
@@ -146,6 +147,23 @@ impl Table {
     /// Restores the definition after deserialization.
     pub(crate) fn restore_definition(&mut self, definition: TableDefinition) {
         self.definition = definition;
+    }
+
+    pub(crate) fn update_from_static(&mut self, static_table: &StaticTable) {
+        self.rows = static_table.rows().clone();
+        self.blake3_hash.set(static_table.hash());
+    }
+}
+
+impl From<&StaticTable> for Table {
+    fn from(static_table: &StaticTable) -> Self {
+        let s = Self {
+            definition: static_table.definition().clone(),
+            rows: static_table.rows().clone(),
+            blake3_hash: StoreHashContainer::new(),
+        };
+        s.blake3_hash.set(static_table.hash());
+        s
     }
 }
 

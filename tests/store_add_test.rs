@@ -1,7 +1,7 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store, StorePath};
-use datastore::store_key;
+use datastore::store::{ProxyStoreTrait, Store};
+use datastore::{StorePath, store_key};
 
 #[test]
 fn test_add_object_from_another_store() {

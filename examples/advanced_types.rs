@@ -1,8 +1,9 @@
+use datastore::StorePath;
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
     TableDefinition,
 };
-use datastore::store::{ProxyStoreTrait, Store, StorePath};
+use datastore::store::{ProxyStoreTrait, Store};
 use datastore::{path, store_key};
 
 fn main() {

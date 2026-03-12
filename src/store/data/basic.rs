@@ -1,5 +1,6 @@
 use crate::definition::BasicDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::static_store::data::StaticBasic;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 use serde::{Deserialize, Serialize};
 
@@ -55,6 +56,23 @@ impl Basic {
     /// Restores the definition after deserialization.
     pub(crate) fn restore_definition(&mut self, definition: BasicDefinition) {
         self.definition = definition;
+    }
+
+    pub(crate) fn update_from_static(&mut self, static_basic: &StaticBasic) {
+        self.value = static_basic.value().clone();
+        self.blake3_hash.set(static_basic.hash());
+    }
+}
+
+impl From<&StaticBasic> for Basic {
+    fn from(static_basic: &StaticBasic) -> Self {
+        let s = Self {
+            definition: static_basic.definition().clone(),
+            value: static_basic.value().clone(),
+            blake3_hash: StoreHashContainer::new(),
+        };
+        s.blake3_hash.set(static_basic.hash());
+        s
     }
 }
 

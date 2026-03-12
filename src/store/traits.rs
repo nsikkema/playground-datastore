@@ -1,9 +1,9 @@
-use super::{ObjectProxy, StorePath};
-use crate::StoreError;
+use super::ObjectProxy;
 use crate::shareable_string::ShareableString;
+use crate::{StoreError, StorePath};
 
 /// Internal trait for common store operations related to hashing.
-pub(in crate::store) trait CommonStoreTraitInternal {
+pub(crate) trait CommonStoreTraitInternal {
     /// Returns the current BLAKE3 hash.
     fn current_blake3_hash(&self) -> [u8; 32];
     /// Updates the BLAKE3 hash.
