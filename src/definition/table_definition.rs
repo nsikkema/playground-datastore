@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::sync::Arc;
 
 /// Definition for a table, which is a collection of named columns each having a `BasicDefinition`.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TableDefinition {
     description: ShareableString,
     columns: Arc<BTreeMap<ShareableString, BasicDefinition>>,

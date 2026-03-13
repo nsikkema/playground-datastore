@@ -53,17 +53,11 @@ impl PropertyDefinitionType {
 }
 
 /// Definition for a property, including its type and metadata like description and visibility.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PropertyDefinition {
     description: ShareableString,
     item_type: Arc<PropertyDefinitionType>,
     gui_visibility: bool,
-}
-
-impl Default for PropertyDefinitionType {
-    fn default() -> Self {
-        Self::Basic(BasicDefinition::default())
-    }
 }
 
 impl PropertyDefinition {

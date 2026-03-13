@@ -1,6 +1,5 @@
 use crate::shareable_string::string::ShareableString;
 use parking_lot::RwLock;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use std::collections::HashSet;
 use std::sync::Arc;
 
@@ -9,32 +8,6 @@ use std::sync::Arc;
 #[derive(Debug, Clone)]
 pub struct SharedStringStore {
     string_store: Arc<RwLock<HashSet<ShareableString>>>,
-}
-
-impl Serialize for SharedStringStore {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let store = self.string_store.read();
-        let mut strings: Vec<ShareableString> = store.iter().cloned().collect();
-        strings.sort();
-        strings.serialize(serializer)
-    }
-}
-
-impl<'de> Deserialize<'de> for SharedStringStore {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        let strings: Vec<ShareableString> = Vec::deserialize(deserializer)?;
-        let store = SharedStringStore::new();
-        for s in strings {
-            store.add(&s);
-        }
-        Ok(store)
-    }
 }
 
 impl Default for SharedStringStore {
@@ -338,23 +311,4 @@ fn test_store_contains() {
 fn test_store_default() {
     let store = SharedStringStore::default();
     assert_eq!(store.len(), 0);
-}
-
-#[test]
-fn test_store_serde() {
-    let store = SharedStringStore::new();
-    store.get("a");
-    store.get("b");
-
-    let serialized = serde_json::to_string(&store).unwrap();
-    let deserialized: SharedStringStore = serde_json::from_str(&serialized).unwrap();
-
-    assert_eq!(deserialized.len(), 2);
-    assert!(deserialized.contains("a"));
-    assert!(deserialized.contains("b"));
-
-    // Interning should be active in the deserialized store.
-    let s1 = deserialized.get("c");
-    let s2 = deserialized.get("c");
-    assert!(Arc::ptr_eq(s1.as_arc(), s2.as_arc()));
 }
