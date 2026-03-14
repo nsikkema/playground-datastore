@@ -95,6 +95,11 @@ impl PropertyDefinition {
         self.item_type.as_ref()
     }
 
+    /// Returns whether the property is visible in the GUI.
+    pub fn is_gui_visible(&self) -> bool {
+        self.gui_visibility
+    }
+
     /// Returns a reference to the description.
     pub fn description_ref(&self) -> &ShareableString {
         &self.description

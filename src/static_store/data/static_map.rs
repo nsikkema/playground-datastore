@@ -1,23 +1,35 @@
-use crate::definition::MapDefinition;
+use crate::StoreKey;
+use crate::definition::{MapDefinition, StructDefinition, StructItemDefinition};
 use crate::shareable_string::ShareableString;
-use crate::static_store::data::StaticProperty;
+use crate::static_store::data::StaticStruct;
+use crate::store::TreePrint;
 use crate::store::data::{Container, ContainerDefinition};
-use crate::store::{CommonStoreTraitInternal, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticMap {
     definition: MapDefinition,
-    items: BTreeMap<ShareableString, StaticProperty>,
+    items: BTreeMap<ShareableString, StaticStruct>,
     hash: [u8; 32],
 }
 
 impl StaticMap {
-    pub fn new(
-        definition: MapDefinition,
-        items: BTreeMap<ShareableString, StaticProperty>,
+    pub fn new<S: Into<ShareableString>>(
+        description: S,
+        items: BTreeMap<StoreKey, StaticStruct>,
     ) -> Self {
+        let item_type = if let Some(first_item) = items.values().next() {
+            first_item.definition().clone()
+        } else {
+            // If the map is empty, we need more information to infer the item type.
+            // In a real scenario, we might want to ask for more information or have a default.
+            // For now, we'll create an empty StructDefinition as a placeholder.
+            StructDefinition::new("", Vec::<(StoreKey, StructItemDefinition)>::new())
+        };
+
+        let definition = MapDefinition::new(description, item_type);
+        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
@@ -53,15 +65,15 @@ impl StaticMap {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticProperty> {
+    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticStruct> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticProperty> {
+    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticStruct> {
         self.items.get(key.as_ref())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticProperty)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticStruct)> {
         self.items.iter()
     }
 
@@ -75,18 +87,15 @@ impl From<&Container> for StaticMap {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                items.insert(key, StaticProperty::from(item));
+                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
+                items.insert(store_key, StaticStruct::from(item));
             }
         }
-        let definition = match container.definition() {
-            ContainerDefinition::Map(def) => def.clone(),
+        let description = match container.definition() {
+            ContainerDefinition::Map(def) => def.description(),
             _ => panic!("Expected MapDefinition"),
         };
-        Self {
-            definition,
-            items,
-            hash: container.current_blake3_hash(),
-        }
+        Self::new(description, items)
     }
 }
 

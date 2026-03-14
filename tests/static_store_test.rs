@@ -1,7 +1,71 @@
-use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
+use datastore::definition::{
+    BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
+};
 use datastore::shareable_string::SharedStringStore;
+use datastore::static_store::data::{StaticBasic, StaticStruct, StaticStructItem, StaticTable};
 use datastore::store::{ProxyStoreTrait, Store};
 use datastore::store_key;
+use std::collections::BTreeMap;
+
+#[test]
+fn test_static_basic_creation() {
+    let basic_def = BasicDefinition::new_string("Static data");
+    let static_basic = StaticBasic::new(basic_def, "".into());
+
+    assert_eq!(static_basic.value(), "");
+    assert_eq!(static_basic.definition().description(), "Static data")
+}
+
+#[test]
+fn test_static_table_creation() {
+    let table_def = TableDefinition::new(
+        "Static Table",
+        vec![(
+            store_key!("static_column"),
+            BasicDefinition::new_string("Static value"),
+        )],
+    );
+    let static_table = StaticTable::new(
+        table_def,
+        vec![BTreeMap::from([("static_column".into(), "test".into())])],
+    );
+
+    assert_eq!(static_table.definition().description(), "Static Table");
+    assert_eq!(
+        *static_table.row(0).unwrap().get("static_column").unwrap(),
+        "test"
+    );
+    assert_eq!(*static_table.cell_by_index(0, 0).unwrap(), "test");
+    assert_eq!(
+        *static_table.cell_by_name(0, "static_column").unwrap(),
+        "test"
+    );
+}
+
+#[test]
+fn test_static_struct_creation() {
+    let mut items = BTreeMap::new();
+    items.insert(
+        store_key!("static_field").into(),
+        StaticStructItem::Basic(StaticBasic::new(
+            BasicDefinition::new_string("Static value"),
+            "test".into(),
+        )),
+    );
+    let static_struct = StaticStruct::new("Static Struct", items);
+
+    assert_eq!(static_struct.definition().description(), "Static Struct");
+    assert_eq!(
+        static_struct
+            .get("static_field")
+            .unwrap()
+            .get_basic()
+            .unwrap()
+            .value()
+            .as_str(),
+        "test"
+    );
+}
 
 #[test]
 fn test_store_to_static() {
@@ -321,4 +385,313 @@ fn test_update_from_static_add_object() {
             .object(&datastore::StorePath::builder(obj_key.as_str()).build())
             .is_ok()
     );
+}
+
+#[test]
+fn test_static_map_with_structs() {
+    use datastore::definition::StructDefinition;
+    let store = Store::new(SharedStringStore::new());
+    let obj_key = store_key!("my_object");
+
+    let struct_def = StructDefinition::new(
+        "A Struct",
+        vec![(store_key!("s_prop"), BasicDefinition::new_string("s_val"))],
+    );
+
+    let map_def = MapDefinition::new("A Map", struct_def);
+
+    let def = ObjectDefinition::builder("Object with Map")
+        .with_inserted(
+            store_key!("my_map"),
+            PropertyDefinition::new("My Map", map_def),
+        )
+        .finish();
+
+    let mut proxy = store.create_object(obj_key.clone(), &def).unwrap();
+
+    {
+        let map_proxy = proxy.container("my_map").unwrap();
+        let s_proxy = map_proxy.insert_map_entry("key1").unwrap();
+        let s_path = s_proxy.path();
+        let mut b_proxy = store
+            .basic(&s_path.clone().push_struct_item("s_prop"))
+            .unwrap();
+        b_proxy.set_value("initial");
+        b_proxy.push().unwrap();
+    }
+
+    let static_store = store.to_static();
+
+    // Verify static map access
+    let obj = static_store.get("my_object").unwrap();
+    let map_prop = obj.get("my_map").unwrap();
+    let static_map = map_prop.get_map().unwrap();
+
+    let static_struct = static_map.get("key1").unwrap();
+    let basic_item = static_struct.get("s_prop").unwrap();
+    if let datastore::static_store::data::StaticStructItem::Basic(b) = basic_item {
+        assert_eq!(b.value().as_str(), "initial");
+    } else {
+        panic!("Expected basic item");
+    }
+
+    // Roundtrip update
+    let other_store = Store::new(SharedStringStore::new());
+    other_store.create_object(obj_key.clone(), &def).unwrap();
+
+    other_store.sync_from_static(&static_store);
+
+    let s_path = datastore::StorePath::builder("my_object")
+        .property("my_map")
+        .map_key("key1")
+        .build();
+    let b_path = s_path.push_struct_item("s_prop");
+    let b_proxy = other_store.basic(&b_path).unwrap();
+    assert_eq!(b_proxy.value().as_str(), "initial");
+}
+
+#[test]
+fn test_static_store_all_types() {
+    use datastore::definition::StructDefinition;
+    use datastore::path;
+
+    let store = Store::new(SharedStringStore::new());
+    let obj_key = store_key!("example_item");
+
+    // Define Struct type
+    let struct_def = StructDefinition::new(
+        "A sample struct",
+        vec![
+            (
+                store_key!("field_1"),
+                BasicDefinition::new_string("Field 1"),
+            ),
+            (
+                store_key!("field_2"),
+                BasicDefinition::new_number("Field 2"),
+            ),
+        ],
+    );
+
+    // Define Table type
+    let table_def = TableDefinition::new(
+        "A sample table",
+        vec![
+            (store_key!("col_1"), BasicDefinition::new_string("Column 1")),
+            (store_key!("col_2"), BasicDefinition::new_number("Column 2")),
+        ],
+    );
+
+    // Define Map type
+    let map_def = MapDefinition::new("A sample map", struct_def.clone());
+
+    // Define Object structure
+    let mut builder = ObjectDefinition::builder("Example Object");
+    builder.insert(
+        store_key!("basic_prop"),
+        PropertyDefinition::new("Basic Property", BasicDefinition::new_string("Basic")),
+    );
+    builder.insert(
+        store_key!("table_prop"),
+        PropertyDefinition::new("Table Property", table_def.clone()),
+    );
+    builder.insert(
+        store_key!("struct_prop"),
+        PropertyDefinition::new("Struct Property", struct_def.clone()),
+    );
+    builder.insert(
+        store_key!("map_prop"),
+        PropertyDefinition::new("Map Property", map_def.clone()),
+    );
+    let object_def = builder.finish();
+
+    // Create the object in the store
+    store
+        .create_object(obj_key.clone(), &object_def)
+        .expect("Failed to create object");
+
+    // Populate the data
+    let mut object_proxy = store.object(&path!("example_item")).unwrap();
+
+    // Set Basic property
+    {
+        let mut basic = object_proxy.basic("basic_prop").unwrap();
+        basic.set_value("Hello, Static Store!");
+        basic.push().unwrap();
+    }
+
+    // Set Table property
+    {
+        let mut table = object_proxy.table("table_prop").unwrap();
+        table.append_row();
+        table.set_cell(0, "col_1", "Row 0, Col 1").unwrap();
+        table.set_cell(0, "col_2", "42").unwrap();
+        table.push().unwrap();
+    }
+
+    // Set Struct property
+    {
+        let struct_container = object_proxy.container("struct_prop").unwrap();
+        let mut s_field_1 = store
+            .basic(
+                &struct_container
+                    .path()
+                    .clone()
+                    .to_builder()
+                    .struct_item("field_1")
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        s_field_1.set_value("Struct Value");
+        s_field_1.push().unwrap();
+
+        let mut s_field_2 = store
+            .basic(
+                &struct_container
+                    .path()
+                    .clone()
+                    .to_builder()
+                    .struct_item("field_2")
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        s_field_2.set_value("123");
+        s_field_2.push().unwrap();
+    }
+
+    // Set Map property
+    {
+        let map_container = object_proxy.container("map_prop").unwrap();
+        let entry_proxy = map_container.insert_map_entry("entry_1").unwrap();
+
+        let mut m_field_1 = store
+            .basic(
+                &entry_proxy
+                    .path()
+                    .clone()
+                    .to_builder()
+                    .struct_item("field_1")
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        m_field_1.set_value("Map Entry Value");
+        m_field_1.push().unwrap();
+
+        let mut m_field_2 = store
+            .basic(
+                &entry_proxy
+                    .path()
+                    .clone()
+                    .to_builder()
+                    .struct_item("field_2")
+                    .build()
+                    .unwrap(),
+            )
+            .unwrap();
+        m_field_2.set_value("456");
+        m_field_2.push().unwrap();
+    }
+
+    // Convert the store to a StaticStore
+    let static_store = store.to_static();
+
+    // Print static store
+    static_store.tree_print();
+
+    // Verify hash consistency
+    assert_eq!(store.get_blake3_hash(), static_store.get_blake3_hash());
+
+    // Verify StaticStore data access
+    let obj = static_store.get("example_item").unwrap();
+
+    // Basic
+    assert_eq!(
+        obj.get("basic_prop")
+            .unwrap()
+            .get_basic()
+            .unwrap()
+            .value()
+            .as_str(),
+        "Hello, Static Store!"
+    );
+
+    // Table
+    let table = obj.get("table_prop").unwrap().get_table().unwrap();
+    assert_eq!(
+        table.cell_by_name(0, "col_1").unwrap().as_str(),
+        "Row 0, Col 1"
+    );
+    assert_eq!(table.cell_by_name(0, "col_2").unwrap().as_str(), "42");
+
+    // Struct
+    let r_struct = obj.get("struct_prop").unwrap().get_struct().unwrap();
+    if let datastore::static_store::data::StaticStructItem::Basic(b) =
+        r_struct.get("field_1").unwrap()
+    {
+        assert_eq!(b.value().as_str(), "Struct Value");
+    } else {
+        panic!("Expected Basic for field_1");
+    }
+
+    // Map
+    let map = obj.get("map_prop").unwrap().get_map().unwrap();
+    let entry_struct = map.get("entry_1").unwrap();
+    if let datastore::static_store::data::StaticStructItem::Basic(b) =
+        entry_struct.get("field_2").unwrap()
+    {
+        assert_eq!(b.value().as_str(), "456");
+    } else {
+        panic!("Expected Basic for field_2 in map entry");
+    }
+
+    // Roundtrip back to a new Store
+    let restored_store = Store::new_from_static(&static_store);
+    assert_eq!(store.get_blake3_hash(), restored_store.get_blake3_hash());
+
+    // Verify data in restored store
+    let mut rest_obj_proxy = restored_store.object(&path!("example_item")).unwrap();
+    assert_eq!(
+        rest_obj_proxy.basic("basic_prop").unwrap().value().as_str(),
+        "Hello, Static Store!"
+    );
+
+    let rest_table_proxy = rest_obj_proxy.table("table_prop").unwrap();
+    assert_eq!(
+        rest_table_proxy
+            .row(0)
+            .unwrap()
+            .get("col_1")
+            .unwrap()
+            .as_str(),
+        "Row 0, Col 1"
+    );
+
+    let rest_struct_container = rest_obj_proxy.container("struct_prop").unwrap();
+    let rest_s_field_1 = restored_store
+        .basic(
+            &rest_struct_container
+                .path()
+                .clone()
+                .to_builder()
+                .struct_item("field_1")
+                .build()
+                .unwrap(),
+        )
+        .unwrap();
+    assert_eq!(rest_s_field_1.value().as_str(), "Struct Value");
+
+    let rest_map_container = rest_obj_proxy.container("map_prop").unwrap();
+    let rest_m_path = rest_map_container
+        .path()
+        .clone()
+        .to_builder()
+        .map_key("entry_1")
+        .struct_item("field_2")
+        .build()
+        .unwrap();
+    let rest_m_field_2 = restored_store.basic(&rest_m_path).unwrap();
+    assert_eq!(rest_m_field_2.value().as_str(), "456");
 }

@@ -145,121 +145,140 @@ impl std::fmt::Display for ShareableString {
     }
 }
 
-#[test]
-fn test_hashmap_lookup_by_str() {
-    use std::collections::HashMap;
-    let key = ShareableString::new("k");
+#[cfg(test)]
+mod tests {
+    use super::*;
 
-    let mut map: HashMap<ShareableString, usize> = HashMap::new();
-    map.insert(key.clone(), 123);
+    #[test]
+    fn test_hashmap_lookup_by_str() {
+        use std::collections::HashMap;
+        let key = ShareableString::new("k");
 
-    assert_eq!(map.get("k"), Some(&123));
-    assert_eq!(map.get("missing"), None);
-}
+        let mut map: HashMap<ShareableString, usize> = HashMap::new();
+        map.insert(key.clone(), 123);
 
-#[test]
-fn test_display() {
-    let s = ShareableString::new("hello");
-    assert_eq!(format!("{s}"), "hello");
-}
+        assert_eq!(map.get("k"), Some(&123));
+        assert_eq!(map.get("missing"), None);
+    }
 
-#[test]
-fn test_sorting_by_string_value() {
-    let mut v = vec![
-        ShareableString::new("b"),
-        ShareableString::new("a"),
-        ShareableString::new("c"),
-    ];
+    #[test]
+    fn test_display() {
+        let s = ShareableString::new("hello");
+        assert_eq!(format!("{s}"), "hello");
+    }
 
-    v.sort();
+    #[test]
+    fn test_sorting_by_string_value() {
+        let mut v = vec![
+            ShareableString::new("b"),
+            ShareableString::new("a"),
+            ShareableString::new("c"),
+        ];
 
-    assert_eq!(v, vec!["a", "b", "c"]);
-}
+        v.sort();
 
-#[test]
-fn test_clone_shares_arc() {
-    let s1 = ShareableString::new("hello");
-    let s2 = s1.clone();
+        assert_eq!(v, vec!["a", "b", "c"]);
+    }
 
-    assert_eq!(s1, s2);
-    assert!(Arc::ptr_eq(s1.as_arc(), s2.as_arc()));
-    assert_eq!(s1.as_ref(), "hello");
-}
+    #[test]
+    fn test_clone_shares_arc() {
+        let s1 = ShareableString::new("hello");
+        let s2 = s1.clone();
 
-#[test]
-fn test_equality_with_str_and_string() {
-    let s = ShareableString::new("hello");
+        assert_eq!(s1, s2);
+        assert!(Arc::ptr_eq(s1.as_arc(), s2.as_arc()));
+        assert_eq!(s1.as_ref(), "hello");
+    }
 
-    assert_eq!(s, "hello");
-    assert_ne!(s, "world");
+    #[test]
+    fn test_equality_with_str_and_string() {
+        let s = ShareableString::new("hello");
 
-    assert_eq!(s, String::from("hello"));
-    assert_ne!(s, String::from("world"));
-}
+        assert_eq!(s, "hello");
+        assert_ne!(s, "world");
 
-#[test]
-fn test_current_hash_stable_for_same_content() {
-    let a1 = ShareableString::new("same");
-    let a2 = ShareableString::new("same");
-    let b = ShareableString::new("different");
+        assert_eq!(s, String::from("hello"));
+        assert_ne!(s, String::from("world"));
+    }
 
-    assert_eq!(a1.current_blake3_hash(), a2.current_blake3_hash());
-    assert_ne!(a1.current_blake3_hash(), b.current_blake3_hash());
-}
+    #[test]
+    fn test_current_hash_stable_for_same_content() {
+        let a1 = ShareableString::new("same");
+        let a2 = ShareableString::new("same");
+        let b = ShareableString::new("different");
 
-#[test]
-fn test_empty_and_unicode() {
-    let empty = ShareableString::new("");
-    assert_eq!(empty.as_ref(), "");
-    assert_eq!(format!("{empty}"), "");
+        assert_eq!(a1.current_blake3_hash(), a2.current_blake3_hash());
+        assert_ne!(a1.current_blake3_hash(), b.current_blake3_hash());
+    }
 
-    let uni = ShareableString::new("🦀 ¡Hola! 🦀");
-    assert_eq!(uni.as_ref(), "🦀 ¡Hola! 🦀");
-    assert_eq!(format!("{uni}"), "🦀 ¡Hola! 🦀");
-}
+    #[test]
+    fn test_empty_and_unicode() {
+        let empty = ShareableString::new("");
+        assert_eq!(empty.as_ref(), "");
+        assert_eq!(format!("{empty}"), "");
 
-#[test]
-fn test_serde_serialization() {
-    let s = ShareableString::new("serde test");
-    let serialized = serde_json::to_string(&s).unwrap();
-    assert_eq!(serialized, "\"serde test\"");
+        let uni = ShareableString::new("🦀 ¡Hola! 🦀");
+        assert_eq!(uni.as_ref(), "🦀 ¡Hola! 🦀");
+        assert_eq!(format!("{uni}"), "🦀 ¡Hola! 🦀");
+    }
 
-    let deserialized: ShareableString = serde_json::from_str(&serialized).unwrap();
-    assert_eq!(deserialized, s);
-    assert_eq!(deserialized.current_blake3_hash(), s.current_blake3_hash());
-}
+    #[test]
+    fn test_serde_serialization() {
+        let s = ShareableString::new("serde test");
+        let serialized = serde_json::to_string(&s).unwrap();
+        assert_eq!(serialized, "\"serde test\"");
 
-#[test]
-fn test_from_traits() {
-    let s1: ShareableString = "from str".into();
-    let s2: ShareableString = String::from("from string").into();
+        let deserialized: ShareableString = serde_json::from_str(&serialized).unwrap();
+        assert_eq!(deserialized, s);
+        assert_eq!(deserialized.current_blake3_hash(), s.current_blake3_hash());
+    }
 
-    assert_eq!(s1, "from str");
-    assert_eq!(s2, "from string");
-}
+    #[test]
+    fn test_from_traits() {
+        let s1: ShareableString = "from str".into();
+        let s2: ShareableString = String::from("from string").into();
 
-#[test]
-fn test_as_ref_and_borrow() {
-    use std::borrow::Borrow;
-    let s = ShareableString::new("test");
-    let r: &str = s.as_ref();
-    let b: &str = s.borrow();
+        assert_eq!(s1, "from str");
+        assert_eq!(s2, "from string");
 
-    assert_eq!(r, "test");
-    assert_eq!(b, "test");
-}
+        let s3_orig = String::from("from string ref");
+        let s3: ShareableString = (&s3_orig).into();
+        assert_eq!(s3, "from string ref");
+    }
 
-#[test]
-fn test_long_string() {
-    let long_str = "a".repeat(10000);
-    let s = ShareableString::new(&long_str);
-    assert_eq!(s.as_str(), long_str);
-    assert_eq!(s.current_blake3_hash().len(), 32);
-}
+    #[test]
+    fn test_default() {
+        let s = ShareableString::default();
+        assert_eq!(s, "");
+        assert_eq!(
+            s.current_blake3_hash(),
+            ShareableString::new("").current_blake3_hash()
+        );
+    }
 
-#[test]
-fn test_special_characters() {
-    let special = "!@#$%^&*()_+-=[]{}|;':\",./<>? \\";
-    let s = ShareableString::new(special);
-    assert_eq!(s.as_str(), special);
+    #[test]
+    fn test_as_ref_and_borrow() {
+        use std::borrow::Borrow;
+        let s = ShareableString::new("test");
+        let r: &str = s.as_ref();
+        let b: &str = s.borrow();
+
+        assert_eq!(r, "test");
+        assert_eq!(b, "test");
+    }
+
+    #[test]
+    fn test_long_string() {
+        let long_str = "a".repeat(10000);
+        let s = ShareableString::new(&long_str);
+        assert_eq!(s.as_str(), long_str);
+        assert_eq!(s.current_blake3_hash().len(), 32);
+    }
+
+    #[test]
+    fn test_special_characters() {
+        let special = "!@#$%^&*()_+-=[]{}|;':\",./<>? \\";
+        let s = ShareableString::new(special);
+        assert_eq!(s.as_str(), special);
+    }
 }
