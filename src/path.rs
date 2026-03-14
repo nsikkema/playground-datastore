@@ -495,16 +495,39 @@ mod tests {
 
     #[test]
     fn test_ergonomic_paths() {
+        // From string
+        let p0: StorePath = "obj/prop/key".into();
+        assert_eq!(p0.to_string(), "obj/prop/key");
+        assert_eq!(p0.get_kind(), &PathKind::MapEntry);
+
+        // From String object
+        let s = String::from("obj/prop");
+        let ps: StorePath = s.into();
+        assert_eq!(ps.to_string(), "obj/prop");
+        assert_eq!(ps.get_kind(), &PathKind::Property);
+
+        // From ShareableString
+        let ss = ShareableString::from("obj");
+        let pss: StorePath = ss.into();
+        assert_eq!(pss.to_string(), "obj");
+        assert_eq!(pss.get_kind(), &PathKind::Object);
+
         // From tuple
         let p1: StorePath = ("obj", "prop").into();
         assert_eq!(p1.to_string(), "obj/prop");
-        assert_eq!(p1.kind, PathKind::Property);
+        assert_eq!(p1.get_kind(), &PathKind::Property);
 
         let p2: StorePath = ("obj", "prop", "key").into();
         assert_eq!(p2.to_string(), "obj/prop/key");
-        // This is now Property -> MapKey (because obj/prop is property, and property/key is MapEntry or StructItem)
-        // Wait, builder.property("prop").property("key") transitioned kind to?
-        // Let's check.
+        assert_eq!(p2.get_kind(), &PathKind::Property); // property(s2).property(s3)
+
+        let p3: StorePath = ("obj", "prop", "key", "item").into();
+        assert_eq!(p3.to_string(), "obj/prop/key/item");
+        assert_eq!(p3.get_kind(), &PathKind::StructItem);
+
+        let p4: StorePath = ("obj", "prop", "key", "item", "nested").into();
+        assert_eq!(p4.to_string(), "obj/prop/key/item/nested");
+        assert_eq!(p4.get_kind(), &PathKind::Property);
     }
 
     #[test]
@@ -521,12 +544,28 @@ mod tests {
     fn test_parse_path() {
         let p = StorePath::parse("obj/prop/key").unwrap();
         assert_eq!(p.to_string(), "obj/prop/key");
+        assert_eq!(p.get_kind(), &PathKind::MapEntry); // Object -> Prop -> MapKey
+
+        let p2 = StorePath::parse("obj/prop/key/item").unwrap();
+        assert_eq!(p2.to_string(), "obj/prop/key/item");
+        assert_eq!(p2.get_kind(), &PathKind::StructItem); // Object -> Prop -> MapKey -> StructItem
 
         let err = StorePath::parse("").unwrap_err();
         assert_eq!(err, StoreError::KeyEmpty);
 
         let err = StorePath::parse("obj//prop").unwrap_err();
         assert!(matches!(err, StoreError::InvalidPathSegment(_)));
+
+        let err = StorePath::parse("obj/prop/key/item/extra").unwrap_err();
+        assert_eq!(err, StoreError::InvalidPath);
+    }
+
+    #[test]
+    fn test_get_object() {
+        let path = StorePath::parse("obj/prop/key").unwrap();
+        let obj_path = path.get_object();
+        assert_eq!(obj_path.to_string(), "obj");
+        assert_eq!(obj_path.get_kind(), &PathKind::Object);
     }
 
     #[test]
@@ -540,5 +579,65 @@ mod tests {
         assert_eq!(path2.object_key().as_str(), "obj");
         assert_eq!(path2.segments().len(), 2);
         assert_eq!(path2.get_kind(), &PathKind::MapEntry);
+
+        // Test AnyState builder with invalid transition
+        let path3 = path2.to_builder().property("invalid").build();
+        assert_eq!(path3.unwrap_err(), StoreError::InvalidPath);
+    }
+
+    #[test]
+    fn test_builder_states() {
+        // ObjectState -> build
+        let p = StorePathBuilder::new("obj".into()).build();
+        assert_eq!(p.get_kind(), &PathKind::Object);
+
+        // ObjectState -> property -> build
+        let p = StorePathBuilder::new("obj".into()).property("prop").build();
+        assert_eq!(p.get_kind(), &PathKind::Property);
+
+        // PropertyState -> map_key -> build
+        let p = StorePathBuilder::new("obj".into())
+            .property("prop")
+            .map_key("key")
+            .build();
+        assert_eq!(p.get_kind(), &PathKind::MapEntry);
+
+        // PropertyState -> struct_item -> build
+        let p = StorePathBuilder::new("obj".into())
+            .property("prop")
+            .struct_item("item")
+            .build();
+        assert_eq!(p.get_kind(), &PathKind::StructItem);
+
+        // MapEntryState -> struct_item -> build
+        let p = StorePathBuilder::new("obj".into())
+            .property("prop")
+            .map_key("key")
+            .struct_item("item")
+            .build();
+        assert_eq!(p.get_kind(), &PathKind::StructItem);
+
+        // ObjectState -> to_any
+        let p = StorePathBuilder::new("obj".into())
+            .to_any()
+            .property("prop")
+            .build()
+            .unwrap();
+        assert_eq!(p.get_kind(), &PathKind::Property);
+    }
+
+    #[test]
+    fn test_display() {
+        let p = StorePath::builder("obj")
+            .property("prop")
+            .map_key("key")
+            .struct_item("item")
+            .build();
+
+        assert_eq!(p.to_string(), "obj/prop/key/item");
+
+        assert_eq!(Segment::Property("p".into()).to_string(), "p");
+        assert_eq!(Segment::MapKey("k".into()).to_string(), "k");
+        assert_eq!(Segment::StructItem("s".into()).to_string(), "s");
     }
 }
