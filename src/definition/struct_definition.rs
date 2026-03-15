@@ -37,16 +37,10 @@ impl StructItemDefinition {
 }
 
 /// Definition for a structured property, which is a collection of named `StructItemDefinition`s.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructDefinition {
     description: ShareableString,
     item_type: Arc<BTreeMap<ShareableString, StructItemDefinition>>,
-}
-
-impl Default for StructItemDefinition {
-    fn default() -> Self {
-        Self::Basic(BasicDefinition::default())
-    }
 }
 
 impl StructDefinition {

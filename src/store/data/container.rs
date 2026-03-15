@@ -3,13 +3,14 @@ use crate::definition::{
     MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
 };
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::static_store::data::{StaticMap, StaticObject, StaticProperty, StaticStruct};
+use crate::static_store::data::{
+    StaticMap, StaticObject, StaticProperty, StaticStruct, StaticStructItem,
+};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
 /// An item stored within a `Container`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub(crate) enum ContainerItem {
     /// A basic data value.
     Basic(Basic),
@@ -20,7 +21,7 @@ pub(crate) enum ContainerItem {
 }
 
 /// The definition for a `Container`.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub enum ContainerDefinition {
     /// A struct definition.
     Struct(StructDefinition),
@@ -38,12 +39,10 @@ impl Default for ContainerDefinition {
 
 /// A container that holds multiple `ContainerItem`s.
 /// It can represent a struct, a map, or a top-level object.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub(crate) struct Container {
-    #[serde(skip)]
     definition: ContainerDefinition,
     items: HashMap<ShareableString, ContainerItem>,
-    #[serde(skip)]
     blake3_hash: StoreHashContainer,
     locked: bool,
 }
@@ -201,92 +200,6 @@ impl Container {
         }
     }
 
-    /// Updates the hash of this container and all nested items.
-    pub(crate) fn update_blake3_hash_all(&mut self) {
-        for item in self.items.values_mut() {
-            match item {
-                ContainerItem::Basic(item) => item.update_blake3_hash(),
-                ContainerItem::Table(item) => item.update_blake3_hash(),
-                ContainerItem::Container(item) => item.update_blake3_hash_all(),
-            }
-        }
-        self.update_blake3_hash();
-    }
-
-    /// Restores the definition after deserialization.
-    pub(crate) fn restore_definition(&mut self, definition: ContainerDefinition) {
-        self.definition = definition.clone();
-        match definition {
-            ContainerDefinition::Struct(s) => {
-                for (key, item) in self.items.iter_mut() {
-                    if let Some(item_def) = s.get(key) {
-                        match (item, item_def) {
-                            (ContainerItem::Basic(b), StructItemDefinition::Basic(bd)) => {
-                                b.restore_definition(bd.clone());
-                            }
-                            (ContainerItem::Table(t), StructItemDefinition::Table(td)) => {
-                                t.restore_definition(td.clone());
-                            }
-                            _ => {}
-                        }
-                    }
-                }
-            }
-            ContainerDefinition::Map(m) => {
-                let item_def = m.item_type();
-                for item in self.items.values_mut() {
-                    if let ContainerItem::Container(c) = item {
-                        c.restore_definition(ContainerDefinition::Struct(item_def.clone()));
-                    }
-                }
-            }
-            ContainerDefinition::Object(o) => {
-                for (key, item) in self.items.iter_mut() {
-                    if let Some(prop_def) = o.get(key) {
-                        match item {
-                            ContainerItem::Basic(b) => {
-                                if let PropertyDefinitionType::Basic(bd) = prop_def.item_type() {
-                                    b.restore_definition(bd.clone());
-                                } else {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Basic",
-                                        key.as_str()
-                                    );
-                                }
-                            }
-                            ContainerItem::Table(t) => {
-                                if let PropertyDefinitionType::Table(td) = prop_def.item_type() {
-                                    t.restore_definition(td.clone());
-                                } else {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Table",
-                                        key.as_str()
-                                    );
-                                }
-                            }
-                            ContainerItem::Container(c) => match prop_def.item_type() {
-                                PropertyDefinitionType::Struct(sd) => {
-                                    c.restore_definition(ContainerDefinition::Struct(sd.clone()));
-                                }
-                                PropertyDefinitionType::Map(md) => {
-                                    c.restore_definition(ContainerDefinition::Map(md.clone()));
-                                }
-                                _ => {
-                                    panic!(
-                                        "Definition mismatch for key {}: expected Struct or Map",
-                                        key.as_str()
-                                    );
-                                }
-                            },
-                        }
-                    } else {
-                        panic!("Key {} not found in object definition", key.as_str());
-                    }
-                }
-            }
-        }
-    }
-
     pub(crate) fn update_from_static(
         &mut self,
         items: &std::collections::BTreeMap<ShareableString, StaticProperty>,
@@ -302,6 +215,47 @@ impl Container {
             // If doesn't exist or type mismatch, replace it.
             self.items
                 .insert(key.clone(), ContainerItem::from(static_property));
+        }
+        self.update_blake3_hash();
+    }
+
+    pub(crate) fn update_from_static_struct(
+        &mut self,
+        items: &std::collections::BTreeMap<ShareableString, StaticStructItem>,
+    ) {
+        for (key, static_item) in items {
+            if let Some(item) = self.items.get_mut(key) {
+                match (item, static_item) {
+                    (ContainerItem::Basic(b), StaticStructItem::Basic(sb)) => {
+                        b.update_from_static(sb);
+                    }
+                    (ContainerItem::Table(t), StaticStructItem::Table(st)) => {
+                        t.update_from_static(st);
+                    }
+                    _ => {
+                        self.items
+                            .insert(key.clone(), ContainerItem::from(static_item));
+                    }
+                }
+            } else {
+                self.items
+                    .insert(key.clone(), ContainerItem::from(static_item));
+            }
+        }
+        self.update_blake3_hash();
+    }
+
+    pub(crate) fn update_from_static_map(
+        &mut self,
+        items: &std::collections::BTreeMap<ShareableString, StaticStruct>,
+    ) {
+        for (key, static_struct) in items {
+            if let Some(ContainerItem::Container(c)) = self.items.get_mut(key) {
+                c.update_from_static_struct(static_struct.items());
+            } else {
+                self.items
+                    .insert(key.clone(), ContainerItem::from(static_struct));
+            }
         }
         self.update_blake3_hash();
     }
@@ -361,12 +315,26 @@ impl From<&StaticMap> for Container {
     }
 }
 
+impl From<&StaticStructItem> for ContainerItem {
+    fn from(static_item: &StaticStructItem) -> Self {
+        match static_item {
+            StaticStructItem::Basic(b) => ContainerItem::Basic(Basic::from(b)),
+            StaticStructItem::Table(t) => ContainerItem::Table(Table::from(t)),
+        }
+    }
+}
+
+impl From<&StaticStruct> for ContainerItem {
+    fn from(static_struct: &StaticStruct) -> Self {
+        ContainerItem::Container(Container::from(static_struct))
+    }
+}
+
 impl From<&StaticProperty> for ContainerItem {
     fn from(static_property: &StaticProperty) -> Self {
         match static_property {
             StaticProperty::Basic(b) => ContainerItem::Basic(Basic::from(b)),
             StaticProperty::Table(t) => ContainerItem::Table(Table::from(t)),
-            StaticProperty::Object(o) => ContainerItem::Container(Container::from(o)),
             StaticProperty::Struct(s) => ContainerItem::Container(Container::from(s)),
             StaticProperty::Map(m) => ContainerItem::Container(Container::from(m)),
         }
@@ -381,9 +349,6 @@ impl ContainerItem {
             }
             (ContainerItem::Table(t), StaticProperty::Table(st)) => {
                 t.definition() == st.definition()
-            }
-            (ContainerItem::Container(c), StaticProperty::Object(so)) => {
-                matches!(c.definition(), ContainerDefinition::Object(def) if def == so.definition())
             }
             (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
                 matches!(c.definition(), ContainerDefinition::Struct(def) if def == ss.definition())
@@ -403,14 +368,11 @@ impl ContainerItem {
             (ContainerItem::Table(t), StaticProperty::Table(st)) => {
                 t.update_from_static(st);
             }
-            (ContainerItem::Container(c), StaticProperty::Object(so)) => {
-                c.update_from_static(so.items());
-            }
             (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
-                c.update_from_static(ss.items());
+                c.update_from_static_struct(ss.items());
             }
             (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
-                c.update_from_static(sm.items());
+                c.update_from_static_map(sm.items());
             }
             _ => panic!(
                 "Type mismatch in update_from_static - should have been checked by matches_static"

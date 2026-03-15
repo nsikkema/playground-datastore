@@ -77,18 +77,6 @@ pub enum BasicDefinitionType {
     Choice(ChoiceDefinition),
 }
 
-impl From<FileDefinition> for BasicDefinitionType {
-    fn from(definition: FileDefinition) -> Self {
-        Self::File(definition)
-    }
-}
-
-impl From<ChoiceDefinition> for BasicDefinitionType {
-    fn from(definition: ChoiceDefinition) -> Self {
-        Self::Choice(definition)
-    }
-}
-
 impl BasicDefinitionType {
     /// Returns a new `BasicDefinitionType` with strings laundered through the provided store.
     pub fn launder(&self, store: &SharedStringStore) -> Self {

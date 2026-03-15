@@ -3,16 +3,13 @@ use crate::definition::TableDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticTable;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
-use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 /// Represents a table of data in the store.
-#[derive(Debug, Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone)]
 pub struct Table {
-    #[serde(skip)]
     definition: TableDefinition,
     rows: Vec<BTreeMap<ShareableString, ShareableString>>,
-    #[serde(skip)]
     blake3_hash: StoreHashContainer,
 }
 
@@ -142,11 +139,6 @@ impl Table {
             .iter()
             .map(|column| (column.0.clone(), column.1.default_value().clone()))
             .collect()
-    }
-
-    /// Restores the definition after deserialization.
-    pub(crate) fn restore_definition(&mut self, definition: TableDefinition) {
-        self.definition = definition;
     }
 
     pub(crate) fn update_from_static(&mut self, static_table: &StaticTable) {

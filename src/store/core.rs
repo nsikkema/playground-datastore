@@ -6,17 +6,8 @@ use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
 use crate::{Segment, StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
-use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 use std::sync::Arc;
-
-/// Represents the internal state of the store for serialization.
-#[derive(Debug, Serialize, Deserialize)]
-struct StoreState {
-    objects: HashMap<ShareableString, (ObjectDefinition, Container)>,
-    #[serde(skip, default = "SharedStringStore::new")]
-    string_store: SharedStringStore,
-}
 
 /// The internal implementation of the data store.
 #[derive(Debug)]
@@ -319,53 +310,6 @@ impl Store {
         *self.internal.blake3_hash.read()
     }
 
-    /// Returns the store state as a JSON string.
-    pub fn to_json(&self) -> Result<String, StoreError> {
-        let objects = self.internal.objects.read();
-        let mut objects_state = HashMap::new();
-        for (key, container) in objects.iter() {
-            if let ContainerDefinition::Object(def) = container.definition() {
-                objects_state.insert(key.clone(), (def.clone(), container.clone()));
-            }
-        }
-
-        let state = StoreState {
-            objects: objects_state,
-            string_store: self.internal.string_store.clone(),
-        };
-
-        let json = serde_json::to_string(&state)
-            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
-        Ok(json)
-    }
-
-    /// Loads a store from a JSON string.
-    pub fn from_json(json: &str) -> Result<Self, StoreError> {
-        let state: StoreState = serde_json::from_str(json)
-            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
-
-        let mut objects = HashMap::new();
-        let string_store = state.string_store;
-        for (key, (def, container)) in state.objects {
-            let key = string_store.launder(key);
-            let mut container = container.launder(&string_store);
-            container.restore_definition(ContainerDefinition::Object(def));
-            container.update_blake3_hash_all();
-            objects.insert(key, container);
-        }
-
-        let internal = StoreInternal {
-            objects: RwLock::new(objects),
-            string_store,
-            blake3_hash: RwLock::new([0u8; 32]),
-        };
-        internal.update_blake3_hash_locked();
-
-        Ok(Store {
-            internal: Arc::new(internal),
-        })
-    }
-
     /// Launders a `ShareableString` through the store's string store.
     pub fn launder(&self, string: ShareableString) -> ShareableString {
         self.internal.string_store.launder(string)
@@ -407,6 +351,18 @@ impl Store {
         StaticStore::from(self)
     }
 
+    pub fn to_json(&self) -> Result<String, StoreError> {
+        let static_store = self.to_static();
+        serde_json::to_string(&static_store)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))
+    }
+
+    pub fn from_json(json: &str) -> Result<Self, StoreError> {
+        let static_store: StaticStore = serde_json::from_str(json)
+            .map_err(|e| StoreError::SerializationError(e.to_string()))?;
+        Ok(Self::new_from_static(&static_store))
+    }
+
     pub fn new_from_static(static_store: &StaticStore) -> Self {
         let string_store = SharedStringStore::new();
         let mut objects = HashMap::new();
@@ -428,8 +384,16 @@ impl Store {
         }
     }
 
-    pub fn update_from_static(&self, static_store: &StaticStore) {
+    fn update_from_static_internal(&self, static_store: &StaticStore, delete_missing: bool) {
         let mut objects = self.internal.objects.write();
+
+        if delete_missing {
+            for key in objects.keys().cloned().collect::<Vec<_>>() {
+                if !static_store.objects().contains_key(&key) {
+                    objects.remove(&key);
+                }
+            }
+        }
 
         for (key, static_object) in static_store.objects() {
             let laundered_key = self.launder(key.clone());
@@ -448,6 +412,14 @@ impl Store {
         }
 
         self.internal.update_blake3_hash(&objects);
+    }
+
+    pub fn sync_from_static(&self, static_store: &StaticStore) {
+        self.update_from_static_internal(static_store, true);
+    }
+
+    pub fn merge_from_static(&self, static_store: &StaticStore) {
+        self.update_from_static_internal(static_store, false);
     }
 }
 

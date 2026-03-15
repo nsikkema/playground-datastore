@@ -6,6 +6,7 @@ use datastore::{StoreError, StoreKey, store_key};
 
 #[test]
 fn test_object_builder_pattern() {
+    // Why: Test object creation with the builder pattern using with_inserted properties.
     let obj_def = ObjectDefinition::builder("Test Object")
         .with_inserted(
             store_key!("prop1"),
@@ -20,6 +21,7 @@ fn test_object_builder_pattern() {
         )
         .finish();
 
+    // Check that the object definition has the expected number of properties.
     assert_eq!(obj_def.count(), 2);
 }
 
@@ -55,9 +57,6 @@ fn test_object_inheritance() {
 
 #[test]
 fn test_invalid_keys() {
-    use datastore::StoreError;
-    use datastore::StoreKey;
-
     let res = StoreKey::new("".into());
     assert!(matches!(res, Err(StoreError::KeyEmpty)));
 
@@ -209,6 +208,25 @@ fn test_object_definition_inherit_with_check() {
 
     let result = ObjectDefinitionBuilder::new("Child")
         .with_inserted(
+            StoreKey::new("p2".into()).unwrap(),
+            PropertyDefinition::new("ChildProp", BasicDefinition::new_string("D2")),
+        )
+        .with_inherited_checked(parent_def);
+
+    assert!(matches!(result, Ok(_)));
+}
+
+#[test]
+fn test_object_definition_inherit_with_check_error() {
+    let parent_def = ObjectDefinitionBuilder::new("Parent")
+        .with_inserted(
+            StoreKey::new("p1".into()).unwrap(),
+            PropertyDefinition::new("ParentProp", BasicDefinition::new_string("D1")),
+        )
+        .finish();
+
+    let result = ObjectDefinitionBuilder::new("Child")
+        .with_inserted(
             StoreKey::new("p1".into()).unwrap(),
             PropertyDefinition::new("ChildProp", BasicDefinition::new_string("D2")),
         )
@@ -234,6 +252,23 @@ fn test_object_definition_inherit_from_builder() {
 
 #[test]
 fn test_object_definition_inherit_from_builder_with_check() {
+    let b1 = ObjectDefinitionBuilder::new("B1").with_inserted(
+        StoreKey::new("p1".into()).unwrap(),
+        PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
+    );
+
+    let result = ObjectDefinitionBuilder::new("B2")
+        .with_inserted(
+            StoreKey::new("p2".into()).unwrap(),
+            PropertyDefinition::new("P2", BasicDefinition::new_string("D2")),
+        )
+        .with_inherited_from_builder_checked(b1);
+
+    assert!(matches!(result, Ok(_)));
+}
+
+#[test]
+fn test_object_definition_inherit_from_builder_with_check_error() {
     let b1 = ObjectDefinitionBuilder::new("B1").with_inserted(
         StoreKey::new("p1".into()).unwrap(),
         PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),

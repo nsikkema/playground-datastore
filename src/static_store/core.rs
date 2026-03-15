@@ -1,3 +1,4 @@
+use crate::StoreKey;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticObject;
 use crate::store::Store;
@@ -19,7 +20,8 @@ impl From<&Store> for StaticStore {
                 if let Ok(container) =
                     store.get_container_internal(&crate::StorePath::builder(key.clone()).build())
                 {
-                    objects.insert(key, StaticObject::from(&container));
+                    let store_key = StoreKey::new(key.clone()).expect("Valid key from store");
+                    objects.insert(store_key, StaticObject::from(&container));
                 }
             }
         }
@@ -28,7 +30,8 @@ impl From<&Store> for StaticStore {
 }
 
 impl StaticStore {
-    pub fn new(objects: BTreeMap<ShareableString, StaticObject>) -> Self {
+    pub fn new(objects: BTreeMap<StoreKey, StaticObject>) -> Self {
+        let objects = objects.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             objects,
             hash: [0u8; 32],

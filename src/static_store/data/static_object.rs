@@ -1,8 +1,9 @@
+use crate::StoreKey;
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticProperty;
+use crate::store::TreePrint;
 use crate::store::data::{Container, ContainerDefinition};
-use crate::store::{CommonStoreTraitInternal, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -14,10 +15,16 @@ pub struct StaticObject {
 }
 
 impl StaticObject {
-    pub fn new(
-        definition: ObjectDefinition,
-        items: BTreeMap<ShareableString, StaticProperty>,
+    pub fn new<S: Into<ShareableString>>(
+        description: S,
+        items: BTreeMap<StoreKey, StaticProperty>,
     ) -> Self {
+        let mut builder = ObjectDefinition::builder(description);
+        for (k, v) in &items {
+            builder.insert(k.clone(), v.definition());
+        }
+        let definition = builder.finish();
+        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
@@ -75,18 +82,15 @@ impl From<&Container> for StaticObject {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                items.insert(key, StaticProperty::from(item));
+                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
+                items.insert(store_key, StaticProperty::from(item));
             }
         }
-        let definition = match container.definition() {
-            ContainerDefinition::Object(def) => def.clone(),
+        let description = match container.definition() {
+            ContainerDefinition::Object(def) => def.description(),
             _ => panic!("Expected ObjectDefinition"),
         };
-        Self {
-            definition,
-            items,
-            hash: container.current_blake3_hash(),
-        }
+        Self::new(description, items)
     }
 }
 

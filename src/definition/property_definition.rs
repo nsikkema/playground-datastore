@@ -53,17 +53,11 @@ impl PropertyDefinitionType {
 }
 
 /// Definition for a property, including its type and metadata like description and visibility.
-#[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PropertyDefinition {
     description: ShareableString,
     item_type: Arc<PropertyDefinitionType>,
     gui_visibility: bool,
-}
-
-impl Default for PropertyDefinitionType {
-    fn default() -> Self {
-        Self::Basic(BasicDefinition::default())
-    }
 }
 
 impl PropertyDefinition {
@@ -99,6 +93,11 @@ impl PropertyDefinition {
     /// Returns a reference to the type definition.
     pub fn item_type(&self) -> &PropertyDefinitionType {
         self.item_type.as_ref()
+    }
+
+    /// Returns whether the property is visible in the GUI.
+    pub fn is_gui_visible(&self) -> bool {
+        self.gui_visibility
     }
 
     /// Returns a reference to the description.

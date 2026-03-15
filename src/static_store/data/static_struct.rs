@@ -1,23 +1,79 @@
-use crate::definition::StructDefinition;
+use crate::StoreKey;
+use crate::definition::{StructDefinition, StructItemDefinition};
 use crate::shareable_string::ShareableString;
-use crate::static_store::data::StaticProperty;
-use crate::store::data::{Container, ContainerDefinition};
-use crate::store::{CommonStoreTraitInternal, TreePrint};
+use crate::static_store::data::{StaticBasic, StaticTable};
+use crate::store::TreePrint;
+use crate::store::data::{Container, ContainerDefinition, ContainerItem};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum StaticStructItem {
+    Basic(StaticBasic),
+    Table(StaticTable),
+}
+
+impl StaticStructItem {
+    pub fn get_basic(&self) -> Option<&StaticBasic> {
+        match self {
+            StaticStructItem::Basic(basic) => Some(basic),
+            _ => None,
+        }
+    }
+
+    pub fn get_table(&self) -> Option<&StaticTable> {
+        match self {
+            StaticStructItem::Table(table) => Some(table),
+            _ => None,
+        }
+    }
+
+    pub fn definition(&self) -> StructItemDefinition {
+        match self {
+            StaticStructItem::Basic(basic) => {
+                StructItemDefinition::Basic(basic.definition().clone())
+            }
+            StaticStructItem::Table(table) => {
+                StructItemDefinition::Table(table.definition().clone())
+            }
+        }
+    }
+
+    pub fn hash(&self) -> [u8; 32] {
+        match self {
+            StaticStructItem::Basic(basic) => basic.hash(),
+            StaticStructItem::Table(table) => table.hash(),
+        }
+    }
+}
+
+impl TreePrint for StaticStructItem {
+    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+        match self {
+            StaticStructItem::Basic(basic) => basic.tree_print(label, prefix, last),
+            StaticStructItem::Table(table) => table.tree_print(label, prefix, last),
+        }
+    }
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStruct {
     definition: StructDefinition,
-    items: BTreeMap<ShareableString, StaticProperty>,
+    items: BTreeMap<ShareableString, StaticStructItem>,
     hash: [u8; 32],
 }
 
 impl StaticStruct {
-    pub fn new(
-        definition: StructDefinition,
-        items: BTreeMap<ShareableString, StaticProperty>,
+    pub fn new<S: Into<ShareableString>>(
+        description: S,
+        items: BTreeMap<StoreKey, StaticStructItem>,
     ) -> Self {
+        let items_vec: Vec<(StoreKey, StructItemDefinition)> = items
+            .iter()
+            .map(|(k, v)| (k.clone(), v.definition()))
+            .collect();
+        let definition = StructDefinition::new(description, items_vec);
+        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
@@ -53,15 +109,15 @@ impl StaticStruct {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticProperty> {
+    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticStructItem> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticProperty> {
+    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticStructItem> {
         self.items.get(key.as_ref())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticProperty)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticStructItem)> {
         self.items.iter()
     }
 
@@ -70,23 +126,44 @@ impl StaticStruct {
     }
 }
 
+impl From<ContainerItem> for StaticStructItem {
+    fn from(item: ContainerItem) -> Self {
+        match item {
+            ContainerItem::Basic(basic) => StaticStructItem::Basic(StaticBasic::from(&basic)),
+            ContainerItem::Table(table) => StaticStructItem::Table(StaticTable::from(&table)),
+            ContainerItem::Container(_) => {
+                panic!("Nested containers not supported in StaticStructItem")
+            }
+        }
+    }
+}
+
+impl From<ContainerItem> for StaticStruct {
+    fn from(item: ContainerItem) -> Self {
+        match item {
+            ContainerItem::Container(c) => match c.definition() {
+                ContainerDefinition::Struct(_) => StaticStruct::from(&c),
+                _ => panic!("Expected Struct container"),
+            },
+            _ => panic!("Expected ContainerItem::Container for StaticStruct conversion"),
+        }
+    }
+}
+
 impl From<&Container> for StaticStruct {
     fn from(container: &Container) -> Self {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                items.insert(key, StaticProperty::from(item));
+                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
+                items.insert(store_key, StaticStructItem::from(item));
             }
         }
-        let definition = match container.definition() {
-            ContainerDefinition::Struct(def) => def.clone(),
+        let description = match container.definition() {
+            ContainerDefinition::Struct(def) => def.description(),
             _ => panic!("Expected StructDefinition"),
         };
-        Self {
-            definition,
-            items,
-            hash: container.current_blake3_hash(),
-        }
+        Self::new(description, items)
     }
 }
 

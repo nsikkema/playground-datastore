@@ -36,8 +36,8 @@ impl StaticBasic {
         self.hash = *digest.as_bytes();
     }
 
-    pub fn value(&self) -> &ShareableString {
-        &self.value
+    pub fn value(&self) -> ShareableString {
+        self.value.clone()
     }
 
     pub fn definition(&self) -> &BasicDefinition {
