@@ -20,7 +20,17 @@ impl StaticMap {
         items: BTreeMap<StoreKey, StaticStruct>,
     ) -> Self {
         let item_type = if let Some(first_item) = items.values().next() {
-            first_item.definition().clone()
+            let first_def = first_item.definition().clone();
+            for item in items.values().skip(1) {
+                if item.definition() != &first_def {
+                    panic!(
+                        "StaticMap items must have the same struct definition. Expected: {:?}, Found: {:?}",
+                        first_def,
+                        item.definition()
+                    );
+                }
+            }
+            first_def
         } else {
             // If the map is empty, we need more information to infer the item type.
             // In a real scenario, we might want to ask for more information or have a default.
