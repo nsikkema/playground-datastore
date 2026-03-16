@@ -6,7 +6,7 @@ use std::sync::Arc;
 
 /// An immutable, shareable string that includes a precomputed BLAKE3 hash.
 /// It uses an `Arc<str>` for efficient sharing and memory management.
-#[derive(Debug, Clone, Ord, PartialOrd)]
+#[derive(Debug, Clone)]
 pub struct ShareableString {
     data: Arc<str>,
     blake3_hash: [u8; 32],
@@ -101,6 +101,18 @@ impl From<&str> for ShareableString {
 }
 
 impl Eq for ShareableString {}
+
+impl Ord for ShareableString {
+    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
+        self.as_str().cmp(other.as_str())
+    }
+}
+
+impl PartialOrd for ShareableString {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        Some(self.cmp(other))
+    }
+}
 
 impl Serialize for ShareableString {
     fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>

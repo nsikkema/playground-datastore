@@ -52,7 +52,7 @@ fn test_static_struct_creation() {
             "test".into(),
         )),
     );
-    let static_struct = StaticStruct::new("Static Struct", items);
+    let static_struct = StaticStruct::new("Static Struct", items).unwrap();
 
     assert_eq!(static_struct.definition().description(), "Static Struct");
     assert_eq!(
@@ -89,7 +89,7 @@ fn test_store_to_static() {
         basic.push().unwrap();
     }
 
-    let static_store = store.to_static();
+    let static_store = store.to_static().unwrap();
 
     // Verify hash consistency
     assert_eq!(store.get_blake3_hash(), static_store.get_blake3_hash());
@@ -134,7 +134,7 @@ fn test_static_to_store_roundtrip() {
         basic.push().unwrap();
     }
 
-    let static_store = store.to_static();
+    let static_store = store.to_static().unwrap();
     let restored_store = Store::new_from_static(&static_store);
 
     // Verify hash consistency
@@ -170,7 +170,7 @@ fn test_update_from_static() {
     proxy.sync().unwrap();
 
     // Create static store from initial state
-    let static_store = store.to_static();
+    let static_store = store.to_static().unwrap();
 
     // Modify the static store (in a real scenario this might come from another source)
     // Here we'll just modify the store and create a new static one to simulate an updated version.
@@ -185,15 +185,15 @@ fn test_update_from_static() {
         basic.set_value("Updated");
         basic.push().unwrap();
     }
-    let updated_static_store = store.to_static();
+    let updated_static_store = store.to_static().unwrap();
 
     // Reset store to initial state (using the first static store)
-    store.sync_from_static(&static_store);
+    store.sync_from_static(&static_store).unwrap();
     proxy.sync().unwrap();
     assert_eq!(proxy.basic("prop1").unwrap().value().as_str(), "Initial");
 
     // Now update from the "updated" static store
-    store.sync_from_static(&updated_static_store);
+    store.sync_from_static(&updated_static_store).unwrap();
     proxy.sync().unwrap();
 
     // Verify that the proxy still works and reflects the update
@@ -227,10 +227,10 @@ fn test_update_from_static_definition_mismatch() {
 
     let other_store = Store::new(SharedStringStore::new());
     other_store.create_object(obj_key.clone(), &def2).unwrap();
-    let static_store2 = other_store.to_static();
+    let static_store2 = other_store.to_static().unwrap();
 
     // Update store with a static store that has a different definition for the same key
-    store.sync_from_static(&static_store2);
+    store.sync_from_static(&static_store2).unwrap();
 
     // Verify it was replaced
     let obj_keys = store.object_keys().unwrap();
@@ -279,10 +279,10 @@ fn test_update_from_static_does_not_remove_missing_properties() {
         prop1_proxy.set_value("Updated");
         prop1_proxy.push().unwrap();
     }
-    let static_store = other_store.to_static();
+    let static_store = other_store.to_static().unwrap();
 
     // Update original store from static store
-    store.sync_from_static(&static_store);
+    store.sync_from_static(&static_store).unwrap();
     store.tree_print();
 
     // Verify prop1 was updated
@@ -336,10 +336,10 @@ fn test_update_from_static_does_not_remove_missing_objects() {
     let mut prop1_proxy = other_proxy.basic("prop1").unwrap();
     prop1_proxy.set_value("Updated");
     prop1_proxy.push().unwrap();
-    let static_store = other_store.to_static();
+    let static_store = other_store.to_static().unwrap();
 
     // Update original store from static store
-    store.merge_from_static(&static_store);
+    store.merge_from_static(&static_store).unwrap();
     store.tree_print();
 
     // Verify object1 was updated
@@ -371,10 +371,10 @@ fn test_update_from_static_add_object() {
     let obj_key = store_key!("new_object");
     let def = ObjectDefinition::builder("New Object").finish();
     other_store.create_object(obj_key.clone(), &def).unwrap();
-    let static_store = other_store.to_static();
+    let static_store = other_store.to_static().unwrap();
 
     // Update store (which is empty) from static store
-    store.sync_from_static(&static_store);
+    store.sync_from_static(&static_store).unwrap();
 
     // Verify it was added
     let obj_keys = store.object_keys().unwrap();
@@ -420,7 +420,7 @@ fn test_static_map_with_structs() {
         b_proxy.push().unwrap();
     }
 
-    let static_store = store.to_static();
+    let static_store = store.to_static().unwrap();
 
     // Verify static map access
     let obj = static_store.get("my_object").unwrap();
@@ -439,7 +439,7 @@ fn test_static_map_with_structs() {
     let other_store = Store::new(SharedStringStore::new());
     other_store.create_object(obj_key.clone(), &def).unwrap();
 
-    other_store.sync_from_static(&static_store);
+    other_store.sync_from_static(&static_store).unwrap();
 
     let s_path = datastore::StorePath::builder("my_object")
         .property("my_map")
@@ -596,7 +596,7 @@ fn test_static_store_all_types() {
     }
 
     // Convert the store to a StaticStore
-    let static_store = store.to_static();
+    let static_store = store.to_static().unwrap();
 
     // Print static store
     static_store.tree_print();

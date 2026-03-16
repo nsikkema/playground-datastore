@@ -1,3 +1,4 @@
+use crate::StoreError;
 use crate::StoreKey;
 use crate::definition::{StructDefinition, StructItemDefinition};
 use crate::shareable_string::ShareableString;
@@ -67,7 +68,7 @@ impl StaticStruct {
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticStructItem>,
-    ) -> Self {
+    ) -> Result<Self, StoreError> {
         let items_vec: Vec<(StoreKey, StructItemDefinition)> = items
             .iter()
             .map(|(k, v)| (k.clone(), v.definition()))
@@ -80,7 +81,7 @@ impl StaticStruct {
             hash: [0u8; 32],
         };
         s.update_hash();
-        s
+        Ok(s)
     }
 
     fn update_hash(&mut self) {
@@ -91,14 +92,9 @@ impl StaticStruct {
 
         h.update(&(self.items.len() as u64).to_le_bytes());
 
-        // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
-
-        for key in keys {
-            let value = self.items.get(key).unwrap();
+        for (key, item) in &self.items {
             h.update(&key.current_blake3_hash());
-            h.update(&value.hash());
+            h.update(&item.hash());
         }
 
         let digest = h.finalize();
@@ -126,42 +122,54 @@ impl StaticStruct {
     }
 }
 
-impl From<ContainerItem> for StaticStructItem {
-    fn from(item: ContainerItem) -> Self {
+impl TryFrom<ContainerItem> for StaticStructItem {
+    type Error = StoreError;
+
+    fn try_from(item: ContainerItem) -> Result<Self, Self::Error> {
         match item {
-            ContainerItem::Basic(basic) => StaticStructItem::Basic(StaticBasic::from(&basic)),
-            ContainerItem::Table(table) => StaticStructItem::Table(StaticTable::from(&table)),
-            ContainerItem::Container(_) => {
-                panic!("Nested containers not supported in StaticStructItem")
-            }
+            ContainerItem::Basic(basic) => Ok(StaticStructItem::Basic(StaticBasic::from(&basic))),
+            ContainerItem::Table(table) => Ok(StaticStructItem::Table(StaticTable::from(&table))),
+            ContainerItem::Container(_) => Err(StoreError::NestedContainerNotSupported),
         }
     }
 }
 
-impl From<ContainerItem> for StaticStruct {
-    fn from(item: ContainerItem) -> Self {
+impl TryFrom<ContainerItem> for StaticStruct {
+    type Error = StoreError;
+
+    fn try_from(item: ContainerItem) -> Result<Self, Self::Error> {
         match item {
             ContainerItem::Container(c) => match c.definition() {
-                ContainerDefinition::Struct(_) => StaticStruct::from(&c),
-                _ => panic!("Expected Struct container"),
+                ContainerDefinition::Struct(_) => StaticStruct::try_from(&c),
+                _ => Err(StoreError::SchemaMismatch(
+                    "Expected Struct container".into(),
+                )),
             },
-            _ => panic!("Expected ContainerItem::Container for StaticStruct conversion"),
+            _ => Err(StoreError::SchemaMismatch(
+                "Expected ContainerItem::Container for StaticStruct conversion".into(),
+            )),
         }
     }
 }
 
-impl From<&Container> for StaticStruct {
-    fn from(container: &Container) -> Self {
+impl TryFrom<&Container> for StaticStruct {
+    type Error = StoreError;
+
+    fn try_from(container: &Container) -> Result<Self, Self::Error> {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
-                items.insert(store_key, StaticStructItem::from(item));
+                let store_key = StoreKey::new(key.clone())?;
+                items.insert(store_key, StaticStructItem::try_from(item)?);
             }
         }
         let description = match container.definition() {
             ContainerDefinition::Struct(def) => def.description(),
-            _ => panic!("Expected StructDefinition"),
+            _ => {
+                return Err(StoreError::SchemaMismatch(
+                    "Expected StructDefinition".into(),
+                ));
+            }
         };
         Self::new(description, items)
     }

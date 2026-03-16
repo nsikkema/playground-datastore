@@ -36,7 +36,6 @@ pub(crate) struct Container {
 }
 
 impl Container {
-
     /// Returns a new `Container` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
         let mut items = HashMap::new();
@@ -193,7 +192,6 @@ impl Container {
     }
 }
 
-
 impl From<&StaticStruct> for Container {
     fn from(static_struct: &StaticStruct) -> Self {
         let items = static_struct
@@ -275,23 +273,31 @@ impl ContainerItem {
         }
     }
 
-    pub(crate) fn update_from_static(&mut self, static_property: &StaticProperty) {
+    pub(crate) fn update_from_static(
+        &mut self,
+        static_property: &StaticProperty,
+    ) -> Result<(), StoreError> {
         match (self, static_property) {
             (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
                 b.update_from_static(sb);
+                Ok(())
             }
             (ContainerItem::Table(t), StaticProperty::Table(st)) => {
                 t.update_from_static(st);
+                Ok(())
             }
             (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
                 c.update_from_static_struct(ss.items());
+                Ok(())
             }
             (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
                 c.update_from_static_map(sm.items());
+                Ok(())
             }
-            _ => panic!(
+            _ => Err(StoreError::SchemaMismatch(
                 "Type mismatch in update_from_static - should have been checked by matches_static"
-            ),
+                    .into(),
+            )),
         }
     }
 }
@@ -322,13 +328,14 @@ impl CommonStoreTraitInternal for Container {
         keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
 
         for key in keys {
-            let value = self.items.get(key).unwrap();
             h.update(&key.current_blake3_hash());
-            match value {
-                ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
-            };
+            if let Some(value) = self.items.get(key) {
+                match value {
+                    ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
+                    ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
+                    ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
+                };
+            }
         }
 
         let digest = h.finalize();

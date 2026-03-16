@@ -50,6 +50,10 @@ fn test_store_error_display() {
         ),
         "Property conflict: conflict"
     );
+    assert_eq!(
+        format!("{}", StoreError::MissingSchema("schema".to_string())),
+        "Missing schema: schema"
+    );
 }
 
 #[test]

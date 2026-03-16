@@ -1,5 +1,6 @@
+use crate::StoreError;
 use crate::StoreKey;
-use crate::definition::{MapDefinition, StructDefinition, StructItemDefinition};
+use crate::definition::MapDefinition;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticStruct;
 use crate::store::TreePrint;
@@ -18,24 +19,23 @@ impl StaticMap {
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticStruct>,
-    ) -> Self {
+    ) -> Result<Self, StoreError> {
         let item_type = if let Some(first_item) = items.values().next() {
             let first_def = first_item.definition().clone();
             for item in items.values().skip(1) {
                 if item.definition() != &first_def {
-                    panic!(
+                    return Err(StoreError::SchemaMismatch(format!(
                         "StaticMap items must have the same struct definition. Expected: {:?}, Found: {:?}",
                         first_def,
                         item.definition()
-                    );
+                    )));
                 }
             }
             first_def
         } else {
-            // If the map is empty, we need more information to infer the item type.
-            // In a real scenario, we might want to ask for more information or have a default.
-            // For now, we'll create an empty StructDefinition as a placeholder.
-            StructDefinition::new("", Vec::<(StoreKey, StructItemDefinition)>::new())
+            return Err(StoreError::MissingSchema(
+                "StaticMap cannot be empty as item type cannot be inferred".into(),
+            ));
         };
 
         let definition = MapDefinition::new(description, item_type);
@@ -46,7 +46,7 @@ impl StaticMap {
             hash: [0u8; 32],
         };
         s.update_hash();
-        s
+        Ok(s)
     }
 
     fn update_hash(&mut self) {
@@ -57,14 +57,9 @@ impl StaticMap {
 
         h.update(&(self.items.len() as u64).to_le_bytes());
 
-        // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
-
-        for key in keys {
-            let value = self.items.get(key).unwrap();
+        for (key, item) in &self.items {
             h.update(&key.current_blake3_hash());
-            h.update(&value.hash());
+            h.update(&item.hash());
         }
 
         let digest = h.finalize();
@@ -92,18 +87,20 @@ impl StaticMap {
     }
 }
 
-impl From<&Container> for StaticMap {
-    fn from(container: &Container) -> Self {
+impl TryFrom<&Container> for StaticMap {
+    type Error = StoreError;
+
+    fn try_from(container: &Container) -> Result<Self, Self::Error> {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
-                items.insert(store_key, StaticStruct::from(item));
+                let store_key = StoreKey::new(key.clone())?;
+                items.insert(store_key, StaticStruct::try_from(item)?);
             }
         }
         let description = match container.definition() {
             ContainerDefinition::Map(def) => def.description(),
-            _ => panic!("Expected MapDefinition"),
+            _ => return Err(StoreError::SchemaMismatch("Expected MapDefinition".into())),
         };
         Self::new(description, items)
     }

@@ -2,7 +2,9 @@ use crate::StoreError;
 use crate::definition::{ObjectDefinition, PropertyDefinitionType};
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticObject;
-use crate::store::{Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint};
+use crate::store::{
+    Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint,
+};
 use std::collections::HashMap;
 
 /// A top-level object in the store.
@@ -112,13 +114,16 @@ impl Object {
 
     pub(crate) fn update_from_static(
         &mut self,
-        items: &std::collections::BTreeMap<ShareableString, crate::static_store::data::StaticProperty>,
-    ) {
+        items: &std::collections::BTreeMap<
+            ShareableString,
+            crate::static_store::data::StaticProperty,
+        >,
+    ) -> Result<(), crate::StoreError> {
         for (key, static_property) in items {
             if let Some(item) = self.items.get_mut(key)
                 && item.matches_static(static_property)
             {
-                item.update_from_static(static_property);
+                item.update_from_static(static_property)?;
                 continue;
             }
 
@@ -127,6 +132,7 @@ impl Object {
                 .insert(key.clone(), ContainerItem::from(static_property));
         }
         self.update_blake3_hash();
+        Ok(())
     }
 
     /// Clears the hash of this object and all nested items.
@@ -177,13 +183,14 @@ impl CommonStoreTraitInternal for Object {
         keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
 
         for key in keys {
-            let value = self.items.get(key).unwrap();
             h.update(&key.current_blake3_hash());
-            match value {
-                ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
-            };
+            if let Some(value) = self.items.get(key) {
+                match value {
+                    ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
+                    ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
+                    ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
+                };
+            }
         }
 
         let digest = h.finalize();

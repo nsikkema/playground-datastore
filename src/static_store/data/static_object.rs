@@ -1,9 +1,10 @@
+use crate::StoreError;
 use crate::StoreKey;
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticProperty;
 use crate::store::TreePrint;
-use crate::store::data::{Object};
+use crate::store::data::Object;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -18,7 +19,7 @@ impl StaticObject {
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticProperty>,
-    ) -> Self {
+    ) -> Result<Self, StoreError> {
         let mut builder = ObjectDefinition::builder(description);
         for (k, v) in &items {
             builder.insert(k.clone(), v.definition());
@@ -31,7 +32,7 @@ impl StaticObject {
             hash: [0u8; 32],
         };
         s.update_hash();
-        s
+        Ok(s)
     }
 
     fn update_hash(&mut self) {
@@ -42,14 +43,9 @@ impl StaticObject {
 
         h.update(&(self.items.len() as u64).to_le_bytes());
 
-        // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
-
-        for key in keys {
-            let value = self.items.get(key).unwrap();
+        for (key, item) in &self.items {
             h.update(&key.current_blake3_hash());
-            h.update(&value.hash());
+            h.update(&item.hash());
         }
 
         let digest = h.finalize();
@@ -77,13 +73,15 @@ impl StaticObject {
     }
 }
 
-impl From<&Object> for StaticObject {
-    fn from(object: &Object) -> Self {
+impl TryFrom<&Object> for StaticObject {
+    type Error = StoreError;
+
+    fn try_from(object: &Object) -> Result<Self, Self::Error> {
         let mut items = BTreeMap::new();
         for key in object.keys() {
             if let Ok(item) = object.get_item(&key) {
-                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
-                items.insert(store_key, StaticProperty::from(item));
+                let store_key = StoreKey::new(key.clone())?;
+                items.insert(store_key, StaticProperty::try_from(item)?);
             }
         }
         let description = object.definition().description();

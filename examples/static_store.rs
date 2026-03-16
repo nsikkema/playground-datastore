@@ -144,7 +144,7 @@ fn main() {
 
     // 5. Convert the store to a StaticStore.
     // A StaticStore is a read-only, serializable snapshot of the store.
-    let static_store = store.to_static();
+    let static_store = store.to_static().expect("Failed to create static store");
 
     // 6. Demonstrate StaticStore functionality.
     println!("--- Static Store Tree View ---");

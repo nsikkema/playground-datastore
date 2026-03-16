@@ -1,3 +1,4 @@
+use crate::StoreError;
 use crate::StoreKey;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticObject;
@@ -12,18 +13,20 @@ pub struct StaticStore {
     hash: [u8; 32],
 }
 
-impl From<&Store> for StaticStore {
-    fn from(store: &Store) -> Self {
+impl TryFrom<&Store> for StaticStore {
+    type Error = StoreError;
+
+    fn try_from(store: &Store) -> Result<Self, Self::Error> {
         let mut objects = BTreeMap::new();
         if let Ok(keys) = store.object_keys() {
             for key in keys {
                 if let Ok(object) = store.get_object_internal(&key) {
-                    let store_key = StoreKey::new(key.clone()).expect("Valid key from store");
-                    objects.insert(store_key, StaticObject::from(&object));
+                    let store_key = StoreKey::new(key.clone())?;
+                    objects.insert(store_key, StaticObject::try_from(&object)?);
                 }
             }
         }
-        Self::new(objects)
+        Ok(Self::new(objects))
     }
 }
 
@@ -47,13 +50,9 @@ impl StaticStore {
 
         h.update(&(self.objects.len() as u64).to_le_bytes());
 
-        // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.objects.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
-
-        for key in keys {
+        for (key, obj) in &self.objects {
             h.update(&key.current_blake3_hash());
-            h.update(&self.objects.get(key).unwrap().hash());
+            h.update(&obj.hash());
         }
 
         let digest = h.finalize();

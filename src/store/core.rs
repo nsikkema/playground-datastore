@@ -72,10 +72,7 @@ impl StoreInternal {
         }
 
         let launder_definition = definition.launder(&self.string_store);
-        writer.insert(
-            object_key.clone(),
-            Object::new(&launder_definition),
-        );
+        writer.insert(object_key.clone(), Object::new(&launder_definition));
 
         self.update_blake3_hash(&writer);
 
@@ -191,7 +188,10 @@ impl Store {
     }
 
     /// Internal method to get an object at the specified path.
-    pub(crate) fn get_object_internal(&self, object_key: &ShareableString) -> Result<Object, StoreError> {
+    pub(crate) fn get_object_internal(
+        &self,
+        object_key: &ShareableString,
+    ) -> Result<Object, StoreError> {
         self.internal.get_object(object_key)
     }
 
@@ -394,12 +394,12 @@ impl Store {
         }
     }
 
-    pub fn to_static(&self) -> StaticStore {
-        StaticStore::from(self)
+    pub fn to_static(&self) -> Result<StaticStore, StoreError> {
+        StaticStore::try_from(self)
     }
 
     pub fn to_json(&self) -> Result<String, StoreError> {
-        let static_store = self.to_static();
+        let static_store = self.to_static()?;
         serde_json::to_string(&static_store)
             .map_err(|e| StoreError::SerializationError(e.to_string()))
     }
@@ -431,7 +431,11 @@ impl Store {
         }
     }
 
-    fn update_from_static_internal(&self, static_store: &StaticStore, delete_missing: bool) {
+    fn update_from_static_internal(
+        &self,
+        static_store: &StaticStore,
+        delete_missing: bool,
+    ) -> Result<(), StoreError> {
         let mut objects = self.internal.objects.write();
 
         if delete_missing {
@@ -447,7 +451,7 @@ impl Store {
             if let Some(object) = objects.get_mut(&laundered_key)
                 && object.definition() == static_object.definition()
             {
-                object.update_from_static(static_object.items());
+                object.update_from_static(static_object.items())?;
                 continue;
             }
 
@@ -458,14 +462,15 @@ impl Store {
         }
 
         self.internal.update_blake3_hash(&objects);
+        Ok(())
     }
 
-    pub fn sync_from_static(&self, static_store: &StaticStore) {
-        self.update_from_static_internal(static_store, true);
+    pub fn sync_from_static(&self, static_store: &StaticStore) -> Result<(), StoreError> {
+        self.update_from_static_internal(static_store, true)
     }
 
-    pub fn merge_from_static(&self, static_store: &StaticStore) {
-        self.update_from_static_internal(static_store, false);
+    pub fn merge_from_static(&self, static_store: &StaticStore) -> Result<(), StoreError> {
+        self.update_from_static_internal(static_store, false)
     }
 }
 
