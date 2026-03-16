@@ -135,15 +135,15 @@ fn test_table_definition() {
     // Check the various properties of the table definition.
     assert_eq!(table_def.description().as_ref(), "A table");
     assert_eq!(table_def.count(), 2);
-    assert!(table_def.contains_key("col1"));
-    assert!(table_def.contains_key("col2"));
-    assert!(!table_def.contains_key("col3"));
+    assert!(table_def.contains_key(store_key!("col1")));
+    assert!(table_def.contains_key(store_key!("col2")));
+    assert!(!table_def.contains_key(store_key!("col3")));
 
-    let col1 = table_def.get("col1").unwrap();
+    let col1 = table_def.get(store_key!("col1")).unwrap();
     assert_eq!(col1.description().as_ref(), "Column 1");
     assert_eq!(col1.default_value().as_ref(), "");
 
-    let col2 = table_def.get("col2").unwrap();
+    let col2 = table_def.get(store_key!("col2")).unwrap();
     assert_eq!(col2.description().as_ref(), "Column 2");
     assert_eq!(col2.default_value().as_ref(), "test");
 }
@@ -402,6 +402,6 @@ fn test_object_definition_basic() {
 
     assert_eq!(obj_def.description().as_ref(), "Test Object");
     assert_eq!(obj_def.count(), 1);
-    assert!(obj_def.contains_key("prop1"));
+    assert!(obj_def.contains_key(store_key!("prop1")));
     assert!(obj_def.contains_key_str("prop1"));
 }

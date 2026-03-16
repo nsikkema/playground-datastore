@@ -60,7 +60,7 @@ impl TreePrint for StaticStructItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStruct {
     definition: StructDefinition,
-    items: BTreeMap<ShareableString, StaticStructItem>,
+    items: BTreeMap<StoreKey, StaticStructItem>,
     hash: [u8; 32],
 }
 
@@ -74,7 +74,6 @@ impl StaticStruct {
             .map(|(k, v)| (k.clone(), v.definition()))
             .collect();
         let definition = StructDefinition::new(description, items_vec);
-        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
@@ -105,15 +104,15 @@ impl StaticStruct {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticStructItem> {
+    pub(crate) fn items(&self) -> &BTreeMap<StoreKey, StaticStructItem> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticStructItem> {
-        self.items.get(key.as_ref())
+    pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticStructItem> {
+        self.items.get(&key.into())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticStructItem)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticStructItem)> {
         self.items.iter()
     }
 
@@ -159,8 +158,7 @@ impl TryFrom<&Container> for StaticStruct {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                let store_key = StoreKey::new(key.clone())?;
-                items.insert(store_key, StaticStructItem::try_from(item)?);
+                items.insert(key.clone(), StaticStructItem::try_from(item)?);
             }
         }
         let description = match container.definition() {
@@ -187,10 +185,10 @@ impl TreePrint for StaticStruct {
             &self.definition.description()
         );
         let next_prefix = Self::next_prefix(prefix, last);
-        let keys: Vec<_> = self.items.keys().collect();
-        for (i, key) in keys.iter().enumerate() {
-            let is_last = i == keys.len() - 1;
-            self.items[*key].tree_print(key.as_str(), &next_prefix, is_last);
+        let entries: Vec<_> = self.items.iter().collect();
+        for (i, (key, item)) in entries.iter().enumerate() {
+            let is_last = i == entries.len() - 1;
+            item.tree_print(key.as_str(), &next_prefix, is_last);
         }
     }
 }

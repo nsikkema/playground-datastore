@@ -1,3 +1,4 @@
+use crate::StoreKey;
 use crate::definition::TableDefinition;
 use crate::shareable_string::ShareableString;
 use crate::store::data::Table;
@@ -9,14 +10,14 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticTable {
     definition: TableDefinition,
-    rows: Vec<BTreeMap<ShareableString, ShareableString>>,
+    rows: Vec<BTreeMap<StoreKey, ShareableString>>,
     hash: [u8; 32],
 }
 
 impl StaticTable {
     pub fn new(
         definition: TableDefinition,
-        rows: Vec<BTreeMap<ShareableString, ShareableString>>,
+        rows: Vec<BTreeMap<StoreKey, ShareableString>>,
     ) -> Self {
         let mut s = Self {
             definition,
@@ -63,7 +64,7 @@ impl StaticTable {
         self.rows.get(row)?.get(&column_name.into())
     }
 
-    pub fn row(&self, row: usize) -> Option<&BTreeMap<ShareableString, ShareableString>> {
+    pub fn row(&self, row: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
         self.rows.get(row)
     }
 
@@ -71,7 +72,7 @@ impl StaticTable {
         self.hash
     }
 
-    pub fn rows(&self) -> &Vec<BTreeMap<ShareableString, ShareableString>> {
+    pub fn rows(&self) -> &Vec<BTreeMap<StoreKey, ShareableString>> {
         &self.rows
     }
 
@@ -111,15 +112,15 @@ impl TreePrint for StaticTable {
             let is_last_row = i == self.rows.len() - 1;
             println!("{}{}Row {}", next_prefix, Self::branch_char(is_last_row), i);
             let row_prefix = Self::next_prefix(&next_prefix, is_last_row);
-            let keys: Vec<_> = row.keys().collect();
-            for (j, key) in keys.iter().enumerate() {
-                let is_last_key = j == keys.len() - 1;
+            let entries: Vec<_> = row.iter().collect();
+            for (j, (key, value)) in entries.iter().enumerate() {
+                let is_last_key = j == entries.len() - 1;
                 println!(
                     "{}{}{}: {}",
                     row_prefix,
                     Self::branch_char(is_last_key),
-                    key,
-                    row[*key]
+                    key.as_str(),
+                    value
                 );
             }
         }

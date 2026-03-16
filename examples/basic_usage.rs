@@ -26,9 +26,9 @@ fn main() {
 
     // 4. Access Data via Proxies
     // The proxy provides a way to interact with data in the store.
-    let mut user_proxy = store.object(&"user_123".into()).unwrap();
-    let mut username_proxy = user_proxy.basic("username").unwrap();
-    let mut age_proxy = user_proxy.basic("age").unwrap();
+    let mut user_proxy = store.object("user_123").unwrap();
+    let mut username_proxy = user_proxy.basic(store_key!("username")).unwrap();
+    let mut age_proxy = user_proxy.basic(store_key!("age")).unwrap();
 
     // 5. Update Data
     // Changes are made to the proxy first, then pushed to the store.
@@ -40,7 +40,9 @@ fn main() {
 
     // 6. Observe Changes
     // If another handle to the same data exists, it can observe changes.
-    let mut observer_proxy = store.basic(&"user_123/username".into()).unwrap();
+    let mut observer_proxy = store
+        .basic(&datastore::StorePath::from("user_123/username"))
+        .unwrap();
 
     // We update the data via another proxy.
     username_proxy.set_value("john doe updated");

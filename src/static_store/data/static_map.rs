@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticMap {
     definition: MapDefinition,
-    items: BTreeMap<ShareableString, StaticStruct>,
+    items: BTreeMap<StoreKey, StaticStruct>,
     hash: [u8; 32],
 }
 
@@ -39,7 +39,6 @@ impl StaticMap {
         };
 
         let definition = MapDefinition::new(description, item_type);
-        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
@@ -70,15 +69,15 @@ impl StaticMap {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticStruct> {
+    pub(crate) fn items(&self) -> &BTreeMap<StoreKey, StaticStruct> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticStruct> {
-        self.items.get(key.as_ref())
+    pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticStruct> {
+        self.items.get(&key.into())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticStruct)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticStruct)> {
         self.items.iter()
     }
 
@@ -94,8 +93,7 @@ impl TryFrom<&Container> for StaticMap {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                let store_key = StoreKey::new(key.clone())?;
-                items.insert(store_key, StaticStruct::try_from(item)?);
+                items.insert(key.clone(), StaticStruct::try_from(item)?);
             }
         }
         let description = match container.definition() {
@@ -118,10 +116,10 @@ impl TreePrint for StaticMap {
             &self.definition.description()
         );
         let next_prefix = Self::next_prefix(prefix, last);
-        let keys: Vec<_> = self.items.keys().collect();
-        for (i, key) in keys.iter().enumerate() {
-            let is_last = i == keys.len() - 1;
-            self.items[*key].tree_print(key.as_str(), &next_prefix, is_last);
+        let entries: Vec<_> = self.items.iter().collect();
+        for (i, (key, item)) in entries.iter().enumerate() {
+            let is_last = i == entries.len() - 1;
+            item.tree_print(key.as_str(), &next_prefix, is_last);
         }
     }
 }

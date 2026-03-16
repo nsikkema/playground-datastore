@@ -3,7 +3,7 @@ use crate::shareable_string::ShareableString;
 use crate::store::{
     CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table, TreePrint,
 };
-use crate::{StoreError, StorePath};
+use crate::{StoreError, StoreKey, StorePath};
 use std::collections::BTreeMap;
 
 /// A proxy for a table in the store.
@@ -57,21 +57,20 @@ impl TableProxy {
     }
 
     /// Returns a reference to the row at the specified index.
-    pub fn row(&self, index: usize) -> Option<&BTreeMap<ShareableString, ShareableString>> {
+    pub fn row(&self, index: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
         self.data.row(index)
     }
 
     /// Sets the value of a cell in the table.
-    pub fn set_cell<S1: Into<ShareableString>, S2: Into<ShareableString>>(
+    pub fn set_cell<K: AsRef<str>, S: Into<ShareableString>>(
         &mut self,
         row_index: usize,
-        column_key: S1,
-        value: S2,
+        column_key: K,
+        value: S,
     ) -> Result<(), StoreError> {
-        let column_key = column_key.into();
-        let new_value = self.store.launder(value.into());
-        self.data
-            .set_cell(row_index, column_key.as_str(), new_value)
+        let column_key = column_key.as_ref();
+        let new_value = self.store.launder_string(value.into());
+        self.data.set_cell(row_index, column_key, new_value)
     }
 
     /// Sets the values of a row in the table.
@@ -82,7 +81,7 @@ impl TableProxy {
     ) -> Result<(), StoreError> {
         let values: Vec<ShareableString> = values
             .into_iter()
-            .map(|v| self.store.launder(v.into()))
+            .map(|v| self.store.launder_string(v.into()))
             .collect();
         self.data.set_row(row_index, values)
     }
@@ -144,7 +143,7 @@ impl ProxyStoreTrait for TableProxy {
     }
 
     fn object(&self) -> Result<ObjectProxy, StoreError> {
-        let path = self.path.clone().get_object();
-        self.store.object(&path)
+        let key = self.path.object_key();
+        self.store.object(key)
     }
 }

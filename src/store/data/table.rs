@@ -1,15 +1,15 @@
-use crate::StoreError;
 use crate::definition::TableDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticTable;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
+use crate::{StoreError, StoreKey};
 use std::collections::BTreeMap;
 
 /// Represents a table of data in the store.
 #[derive(Debug, Clone)]
 pub struct Table {
     definition: TableDefinition,
-    rows: Vec<BTreeMap<ShareableString, ShareableString>>,
+    rows: Vec<BTreeMap<StoreKey, ShareableString>>,
     blake3_hash: StoreHashContainer,
 }
 
@@ -34,7 +34,7 @@ impl Table {
                 .iter()
                 .map(|row| {
                     row.iter()
-                        .map(|(k, v)| (store.launder(k), store.launder(v)))
+                        .map(|(k, v)| (k.launder(store), store.launder(v)))
                         .collect()
                 })
                 .collect(),
@@ -90,17 +90,18 @@ impl Table {
     }
 
     /// Returns a reference to the row at the specified index.
-    pub fn row(&self, index: usize) -> Option<&BTreeMap<ShareableString, ShareableString>> {
+    pub fn row(&self, index: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
         self.rows.get(index)
     }
 
     /// Sets the value of a cell in the table.
-    pub(crate) fn set_cell(
+    pub(crate) fn set_cell<K: AsRef<str>>(
         &mut self,
         row_index: usize,
-        column_key: &str,
+        column_key: K,
         value: ShareableString,
     ) -> Result<(), StoreError> {
+        let column_key = column_key.as_ref();
         if let Some(row) = self.rows.get_mut(row_index) {
             if let Some(cell) = row.get_mut(column_key) {
                 *cell = value;
@@ -134,7 +135,7 @@ impl Table {
     }
 
     /// Returns a new row populated with default values according to the table definition.
-    fn default_row(&self) -> BTreeMap<ShareableString, ShareableString> {
+    fn default_row(&self) -> BTreeMap<StoreKey, ShareableString> {
         self.definition
             .iter()
             .map(|column| (column.0.clone(), column.1.default_value().clone()))

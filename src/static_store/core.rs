@@ -1,6 +1,5 @@
 use crate::StoreError;
 use crate::StoreKey;
-use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticObject;
 use crate::store::Store;
 use crate::store::TreePrint;
@@ -9,7 +8,7 @@ use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStore {
-    objects: BTreeMap<ShareableString, StaticObject>,
+    objects: BTreeMap<StoreKey, StaticObject>,
     hash: [u8; 32],
 }
 
@@ -21,8 +20,7 @@ impl TryFrom<&Store> for StaticStore {
         if let Ok(keys) = store.object_keys() {
             for key in keys {
                 if let Ok(object) = store.get_object_internal(&key) {
-                    let store_key = StoreKey::new(key.clone())?;
-                    objects.insert(store_key, StaticObject::try_from(&object)?);
+                    objects.insert(key, StaticObject::try_from(&object)?);
                 }
             }
         }
@@ -32,7 +30,7 @@ impl TryFrom<&Store> for StaticStore {
 
 impl StaticStore {
     pub fn new(objects: BTreeMap<StoreKey, StaticObject>) -> Self {
-        let objects = objects.into_iter().map(|(k, v)| (k.key, v)).collect();
+        let objects = objects.into_iter().collect();
         let mut s = Self {
             objects,
             hash: [0u8; 32],
@@ -72,7 +70,7 @@ impl StaticStore {
         self.hash
     }
 
-    pub(crate) fn objects(&self) -> &BTreeMap<ShareableString, StaticObject> {
+    pub(crate) fn objects(&self) -> &BTreeMap<StoreKey, StaticObject> {
         &self.objects
     }
 
@@ -80,7 +78,7 @@ impl StaticStore {
         self.objects.get(key.as_ref())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticObject)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticObject)> {
         self.objects.iter()
     }
 }

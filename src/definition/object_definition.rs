@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, Default, Serialize, Deserialize)]
 pub struct ObjectDefinitionBuilder {
     description: ShareableString,
-    properties: BTreeMap<ShareableString, PropertyDefinition>,
+    properties: BTreeMap<StoreKey, PropertyDefinition>,
 }
 
 impl ObjectDefinitionBuilder {
@@ -46,7 +46,7 @@ impl ObjectDefinitionBuilder {
     ) -> Result<Self, StoreError> {
         for (key, _) in definition.properties.iter() {
             if self.properties.contains_key(key) {
-                return Err(StoreError::PropertyConflict(key.clone()));
+                return Err(StoreError::PropertyConflict(key.key.clone()));
             }
         }
         self.properties.extend(
@@ -77,7 +77,7 @@ impl ObjectDefinitionBuilder {
     ) -> Result<Self, StoreError> {
         for (key, _) in builder.properties.iter() {
             if self.properties.contains_key(key) {
-                return Err(StoreError::PropertyConflict(key.clone()));
+                return Err(StoreError::PropertyConflict(key.key.clone()));
             }
         }
         self.properties.extend(builder.properties);
@@ -92,7 +92,7 @@ impl ObjectDefinitionBuilder {
         key: K,
         property: PropertyDefinition,
     ) -> Self {
-        self.insert(key.into(), property);
+        self.insert(key, property);
         self
     }
 
@@ -100,8 +100,7 @@ impl ObjectDefinitionBuilder {
     ///
     /// This method will overwrite existing properties with the same keys.
     pub fn insert<K: Into<StoreKey>>(&mut self, key: K, property: PropertyDefinition) {
-        let key = key.into().key;
-        self.properties.insert(key, property);
+        self.properties.insert(key.into(), property);
     }
 
     /// Returns a new builder with the property removed.
@@ -128,7 +127,7 @@ impl ObjectDefinitionBuilder {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize, Default)]
 pub struct ObjectDefinition {
     description: ShareableString,
-    properties: Arc<BTreeMap<ShareableString, PropertyDefinition>>,
+    properties: Arc<BTreeMap<StoreKey, PropertyDefinition>>,
 }
 
 impl ObjectDefinition {
@@ -168,7 +167,7 @@ impl ObjectDefinition {
     }
 
     /// Returns a reference to the property definition for the specified key.
-    pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&PropertyDefinition> {
+    pub fn get<S: Into<StoreKey>>(&self, key: S) -> Option<&PropertyDefinition> {
         self.properties.get(&key.into())
     }
 
@@ -178,7 +177,7 @@ impl ObjectDefinition {
     }
 
     /// Returns an iterator over the keys of the properties.
-    pub fn keys(&self) -> impl Iterator<Item = &ShareableString> {
+    pub fn keys(&self) -> impl Iterator<Item = &StoreKey> {
         self.properties.keys()
     }
 
@@ -188,7 +187,7 @@ impl ObjectDefinition {
     }
 
     /// Returns an iterator over the property definitions.
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &PropertyDefinition)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &PropertyDefinition)> {
         self.properties.iter()
     }
 
@@ -199,7 +198,7 @@ impl ObjectDefinition {
             properties: Arc::new(
                 self.properties
                     .iter()
-                    .map(|(k, v)| (store.launder(k), v.launder(store)))
+                    .map(|(k, v)| (k.launder(store), v.launder(store)))
                     .collect(),
             ),
         }

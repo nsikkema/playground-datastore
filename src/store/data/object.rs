@@ -1,17 +1,17 @@
-use crate::StoreError;
 use crate::definition::{ObjectDefinition, PropertyDefinitionType};
-use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::shareable_string::SharedStringStore;
 use crate::static_store::data::StaticObject;
 use crate::store::{
     Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint,
 };
+use crate::{StoreError, StoreKey};
 use std::collections::HashMap;
 
 /// A top-level object in the store.
 #[derive(Debug, Clone)]
 pub struct Object {
     definition: ObjectDefinition,
-    items: HashMap<ShareableString, ContainerItem>,
+    items: HashMap<StoreKey, ContainerItem>,
     blake3_hash: StoreHashContainer,
 }
 
@@ -61,7 +61,7 @@ impl Object {
                 ContainerItem::Table(t) => ContainerItem::Table(t.launder(store)),
                 ContainerItem::Container(c) => ContainerItem::Container(c.launder(store)),
             };
-            items.insert(store.launder(key), laundered_item);
+            items.insert(key.launder(store), laundered_item);
         }
 
         let laundered_definition = self.definition.launder(store);
@@ -76,7 +76,7 @@ impl Object {
     }
 
     /// Returns the keys of all items in the object.
-    pub(crate) fn keys(&self) -> Vec<ShareableString> {
+    pub(crate) fn keys(&self) -> Vec<StoreKey> {
         self.items.keys().cloned().collect()
     }
 
@@ -91,9 +91,9 @@ impl Object {
     }
 
     /// Returns the item associated with the given key.
-    pub(crate) fn get_item(&self, key: &ShareableString) -> Result<ContainerItem, StoreError> {
+    pub(crate) fn get_item<K: AsRef<str>>(&self, key: K) -> Result<ContainerItem, StoreError> {
         self.items
-            .get(key)
+            .get(key.as_ref())
             .cloned()
             .ok_or(StoreError::PropertyNotFound)
     }
@@ -101,7 +101,7 @@ impl Object {
     /// Sets the item for the given key and updates the hash.
     pub(crate) fn set_item(
         &mut self,
-        key: &ShareableString,
+        key: &StoreKey,
         item: ContainerItem,
     ) -> Result<(), StoreError> {
         if !self.items.contains_key(key) {
@@ -114,10 +114,7 @@ impl Object {
 
     pub(crate) fn update_from_static(
         &mut self,
-        items: &std::collections::BTreeMap<
-            ShareableString,
-            crate::static_store::data::StaticProperty,
-        >,
+        items: &std::collections::BTreeMap<StoreKey, crate::static_store::data::StaticProperty>,
     ) -> Result<(), crate::StoreError> {
         for (key, static_property) in items {
             if let Some(item) = self.items.get_mut(key)
@@ -179,17 +176,13 @@ impl CommonStoreTraitInternal for Object {
         h.update(&(self.items.len() as u64).to_le_bytes());
 
         // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
+        let mut keys: Vec<&StoreKey> = self.items.keys().collect();
+        keys.sort_by(|a, b| a.as_str().cmp(b.as_str()));
 
         for key in keys {
             h.update(&key.current_blake3_hash());
             if let Some(value) = self.items.get(key) {
-                match value {
-                    ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
-                    ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
-                    ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
-                };
+                h.update(&value.current_blake3_hash());
             }
         }
 

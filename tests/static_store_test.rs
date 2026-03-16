@@ -27,7 +27,10 @@ fn test_static_table_creation() {
     );
     let static_table = StaticTable::new(
         table_def,
-        vec![BTreeMap::from([("static_column".into(), "test".into())])],
+        vec![BTreeMap::from([(
+            store_key!("static_column").into(),
+            "test".into(),
+        )])],
     );
 
     assert_eq!(static_table.definition().description(), "Static Table");
@@ -80,7 +83,7 @@ fn test_store_to_static() {
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
     let prop_path = datastore::StorePath::builder(obj_key)
-        .property("prop1")
+        .property(store_key!("prop1"))
         .build();
 
     {
@@ -125,7 +128,7 @@ fn test_static_to_store_roundtrip() {
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
     let prop_path = datastore::StorePath::builder(obj_key)
-        .property("prop1")
+        .property(store_key!("prop1"))
         .build();
 
     {
@@ -163,7 +166,7 @@ fn test_update_from_static() {
 
     let mut proxy = store.create_object(obj_key.clone(), &def).unwrap();
     {
-        let mut basic = proxy.basic("prop1").unwrap();
+        let mut basic = proxy.basic(store_key!("prop1")).unwrap();
         basic.set_value("Initial");
         basic.push().unwrap();
     }
@@ -178,7 +181,7 @@ fn test_update_from_static() {
         let mut basic = store
             .basic(
                 &datastore::StorePath::builder(obj_key.clone())
-                    .property("prop1")
+                    .property(store_key!("prop1"))
                     .build(),
             )
             .unwrap();
@@ -190,14 +193,20 @@ fn test_update_from_static() {
     // Reset store to initial state (using the first static store)
     store.sync_from_static(&static_store).unwrap();
     proxy.sync().unwrap();
-    assert_eq!(proxy.basic("prop1").unwrap().value().as_str(), "Initial");
+    assert_eq!(
+        proxy.basic(store_key!("prop1")).unwrap().value().as_str(),
+        "Initial"
+    );
 
     // Now update from the "updated" static store
     store.sync_from_static(&updated_static_store).unwrap();
     proxy.sync().unwrap();
 
     // Verify that the proxy still works and reflects the update
-    assert_eq!(proxy.basic("prop1").unwrap().value().as_str(), "Updated");
+    assert_eq!(
+        proxy.basic(store_key!("prop1")).unwrap().value().as_str(),
+        "Updated"
+    );
     assert_eq!(
         store.get_blake3_hash(),
         updated_static_store.get_blake3_hash()
@@ -237,11 +246,9 @@ fn test_update_from_static_definition_mismatch() {
     assert_eq!(obj_keys.len(), 1);
     assert_eq!(obj_keys[0].as_str(), obj_key.as_str());
 
-    let mut proxy = store
-        .object(&datastore::StorePath::builder(obj_key.as_str()).build())
-        .unwrap();
-    assert!(proxy.basic("prop2").is_ok());
-    assert!(proxy.basic("prop1").is_err());
+    let mut proxy = store.object(obj_key.clone()).unwrap();
+    assert!(proxy.basic(store_key!("prop2")).is_ok());
+    assert!(proxy.basic(store_key!("prop1")).is_err());
 }
 
 #[test]
@@ -275,7 +282,7 @@ fn test_update_from_static_does_not_remove_missing_properties() {
         .create_object(obj_key.clone(), &def_updated)
         .unwrap();
     {
-        let mut prop1_proxy = other_proxy.basic("prop1").unwrap();
+        let mut prop1_proxy = other_proxy.basic(store_key!("prop1")).unwrap();
         prop1_proxy.set_value("Updated");
         prop1_proxy.push().unwrap();
     }
@@ -286,14 +293,12 @@ fn test_update_from_static_does_not_remove_missing_properties() {
     store.tree_print();
 
     // Verify prop1 was updated
-    let mut proxy = store
-        .object(&datastore::StorePath::builder(obj_key.as_str()).build())
-        .unwrap();
-    let prop1_proxy = proxy.basic("prop1").unwrap();
+    let mut proxy = store.object(obj_key.clone()).unwrap();
+    let prop1_proxy = proxy.basic(store_key!("prop1")).unwrap();
     assert_eq!(prop1_proxy.value().as_str(), "Updated");
 
     // Verify prop2 still exists and was removed
-    assert!(proxy.basic("prop2").is_err());
+    assert!(proxy.basic(store_key!("prop2")).is_err());
 }
 
 #[test]
@@ -333,7 +338,7 @@ fn test_update_from_static_does_not_remove_missing_objects() {
     let mut other_proxy = other_store
         .create_object(obj_key1.clone(), &def1_updated)
         .unwrap();
-    let mut prop1_proxy = other_proxy.basic("prop1").unwrap();
+    let mut prop1_proxy = other_proxy.basic(store_key!("prop1")).unwrap();
     prop1_proxy.set_value("Updated");
     prop1_proxy.push().unwrap();
     let static_store = other_store.to_static().unwrap();
@@ -343,18 +348,14 @@ fn test_update_from_static_does_not_remove_missing_objects() {
     store.tree_print();
 
     // Verify object1 was updated
-    let mut proxy1 = store
-        .object(&datastore::StorePath::builder(obj_key1.as_str()).build())
-        .unwrap();
+    let mut proxy1 = store.object(obj_key1.clone()).unwrap();
     // No need to pull because we created a NEW proxy from the store
-    let prop1_proxy = proxy1.basic("prop1").unwrap();
+    let prop1_proxy = proxy1.basic(store_key!("prop1")).unwrap();
     assert_eq!(prop1_proxy.value().as_str(), "Updated");
 
     // Verify object2 still exists
-    let mut proxy2 = store
-        .object(&datastore::StorePath::builder(obj_key2.as_str()).build())
-        .unwrap();
-    assert!(proxy2.basic("prop2").is_ok());
+    let mut proxy2 = store.object(obj_key2.clone()).unwrap();
+    assert!(proxy2.basic(store_key!("prop2")).is_ok());
 
     // Verify both keys are present
     let obj_keys = store.object_keys().unwrap();
@@ -380,11 +381,7 @@ fn test_update_from_static_add_object() {
     let obj_keys = store.object_keys().unwrap();
     assert_eq!(obj_keys.len(), 1);
     assert_eq!(obj_keys[0].as_str(), obj_key.as_str());
-    assert!(
-        store
-            .object(&datastore::StorePath::builder(obj_key.as_str()).build())
-            .is_ok()
-    );
+    assert!(store.object(obj_key.clone()).is_ok());
 }
 
 #[test]
@@ -410,11 +407,11 @@ fn test_static_map_with_structs() {
     let mut proxy = store.create_object(obj_key.clone(), &def).unwrap();
 
     {
-        let map_proxy = proxy.container("my_map").unwrap();
-        let s_proxy = map_proxy.insert_map_entry("key1").unwrap();
+        let map_proxy = proxy.container(store_key!("my_map")).unwrap();
+        let s_proxy = map_proxy.insert_map_entry(store_key!("key1")).unwrap();
         let s_path = s_proxy.path();
         let mut b_proxy = store
-            .basic(&s_path.clone().push_struct_item("s_prop"))
+            .basic(&s_path.clone().push_struct_item(store_key!("s_prop")))
             .unwrap();
         b_proxy.set_value("initial");
         b_proxy.push().unwrap();
@@ -441,11 +438,11 @@ fn test_static_map_with_structs() {
 
     other_store.sync_from_static(&static_store).unwrap();
 
-    let s_path = datastore::StorePath::builder("my_object")
-        .property("my_map")
-        .map_key("key1")
+    let s_path = datastore::StorePath::builder(store_key!("my_object"))
+        .property(store_key!("my_map"))
+        .map_key(store_key!("key1"))
         .build();
-    let b_path = s_path.push_struct_item("s_prop");
+    let b_path = s_path.push_struct_item(store_key!("s_prop"));
     let b_proxy = other_store.basic(&b_path).unwrap();
     assert_eq!(b_proxy.value().as_str(), "initial");
 }
@@ -453,7 +450,6 @@ fn test_static_map_with_structs() {
 #[test]
 fn test_static_store_all_types() {
     use datastore::definition::StructDefinition;
-    use datastore::path;
 
     let store = Store::new(SharedStringStore::new());
     let obj_key = store_key!("example_item");
@@ -511,18 +507,18 @@ fn test_static_store_all_types() {
         .expect("Failed to create object");
 
     // Populate the data
-    let mut object_proxy = store.object(&path!("example_item")).unwrap();
+    let mut object_proxy = store.object("example_item").unwrap();
 
     // Set Basic property
     {
-        let mut basic = object_proxy.basic("basic_prop").unwrap();
+        let mut basic = object_proxy.basic(store_key!("basic_prop")).unwrap();
         basic.set_value("Hello, Static Store!");
         basic.push().unwrap();
     }
 
     // Set Table property
     {
-        let mut table = object_proxy.table("table_prop").unwrap();
+        let mut table = object_proxy.table(store_key!("table_prop")).unwrap();
         table.append_row();
         table.set_cell(0, "col_1", "Row 0, Col 1").unwrap();
         table.set_cell(0, "col_2", "42").unwrap();
@@ -531,14 +527,14 @@ fn test_static_store_all_types() {
 
     // Set Struct property
     {
-        let struct_container = object_proxy.container("struct_prop").unwrap();
+        let struct_container = object_proxy.container(store_key!("struct_prop")).unwrap();
         let mut s_field_1 = store
             .basic(
                 &struct_container
                     .path()
                     .clone()
                     .to_builder()
-                    .struct_item("field_1")
+                    .struct_item(store_key!("field_1"))
                     .build()
                     .unwrap(),
             )
@@ -552,7 +548,7 @@ fn test_static_store_all_types() {
                     .path()
                     .clone()
                     .to_builder()
-                    .struct_item("field_2")
+                    .struct_item(store_key!("field_2"))
                     .build()
                     .unwrap(),
             )
@@ -563,16 +559,17 @@ fn test_static_store_all_types() {
 
     // Set Map property
     {
-        let map_container = object_proxy.container("map_prop").unwrap();
-        let entry_proxy = map_container.insert_map_entry("entry_1").unwrap();
-
+        let map_container = object_proxy.container(store_key!("map_prop")).unwrap();
+        let entry_proxy = map_container
+            .insert_map_entry(store_key!("entry_1"))
+            .unwrap();
         let mut m_field_1 = store
             .basic(
                 &entry_proxy
                     .path()
                     .clone()
                     .to_builder()
-                    .struct_item("field_1")
+                    .struct_item(store_key!("field_1"))
                     .build()
                     .unwrap(),
             )
@@ -586,7 +583,7 @@ fn test_static_store_all_types() {
                     .path()
                     .clone()
                     .to_builder()
-                    .struct_item("field_2")
+                    .struct_item(store_key!("field_2"))
                     .build()
                     .unwrap(),
             )
@@ -652,13 +649,17 @@ fn test_static_store_all_types() {
     assert_eq!(store.get_blake3_hash(), restored_store.get_blake3_hash());
 
     // Verify data in restored store
-    let mut rest_obj_proxy = restored_store.object(&path!("example_item")).unwrap();
+    let mut rest_obj_proxy = restored_store.object("example_item").unwrap();
     assert_eq!(
-        rest_obj_proxy.basic("basic_prop").unwrap().value().as_str(),
+        rest_obj_proxy
+            .basic(store_key!("basic_prop"))
+            .unwrap()
+            .value()
+            .as_str(),
         "Hello, Static Store!"
     );
 
-    let rest_table_proxy = rest_obj_proxy.table("table_prop").unwrap();
+    let rest_table_proxy = rest_obj_proxy.table(store_key!("table_prop")).unwrap();
     assert_eq!(
         rest_table_proxy
             .row(0)
@@ -669,27 +670,27 @@ fn test_static_store_all_types() {
         "Row 0, Col 1"
     );
 
-    let rest_struct_container = rest_obj_proxy.container("struct_prop").unwrap();
+    let rest_struct_container = rest_obj_proxy.container(store_key!("struct_prop")).unwrap();
     let rest_s_field_1 = restored_store
         .basic(
             &rest_struct_container
                 .path()
                 .clone()
                 .to_builder()
-                .struct_item("field_1")
+                .struct_item(store_key!("field_1"))
                 .build()
                 .unwrap(),
         )
         .unwrap();
     assert_eq!(rest_s_field_1.value().as_str(), "Struct Value");
 
-    let rest_map_container = rest_obj_proxy.container("map_prop").unwrap();
+    let rest_map_container = rest_obj_proxy.container(store_key!("map_prop")).unwrap();
     let rest_m_path = rest_map_container
         .path()
         .clone()
         .to_builder()
-        .map_key("entry_1")
-        .struct_item("field_2")
+        .map_key(store_key!("entry_1"))
+        .struct_item(store_key!("field_2"))
         .build()
         .unwrap();
     let rest_m_field_2 = restored_store.basic(&rest_m_path).unwrap();

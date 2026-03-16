@@ -11,7 +11,7 @@ use std::collections::BTreeMap;
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticObject {
     definition: ObjectDefinition,
-    items: BTreeMap<ShareableString, StaticProperty>,
+    items: BTreeMap<StoreKey, StaticProperty>,
     hash: [u8; 32],
 }
 
@@ -19,20 +19,19 @@ impl StaticObject {
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticProperty>,
-    ) -> Result<Self, StoreError> {
+    ) -> Self {
         let mut builder = ObjectDefinition::builder(description);
         for (k, v) in &items {
             builder.insert(k.clone(), v.definition());
         }
         let definition = builder.finish();
-        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
             hash: [0u8; 32],
         };
         s.update_hash();
-        Ok(s)
+        s
     }
 
     fn update_hash(&mut self) {
@@ -56,15 +55,15 @@ impl StaticObject {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticProperty> {
+    pub(crate) fn items(&self) -> &BTreeMap<StoreKey, StaticProperty> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticProperty> {
-        self.items.get(key.as_ref())
+    pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticProperty> {
+        self.items.get(&key.into())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticProperty)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticProperty)> {
         self.items.iter()
     }
 
@@ -80,12 +79,11 @@ impl TryFrom<&Object> for StaticObject {
         let mut items = BTreeMap::new();
         for key in object.keys() {
             if let Ok(item) = object.get_item(&key) {
-                let store_key = StoreKey::new(key.clone())?;
-                items.insert(store_key, StaticProperty::try_from(item)?);
+                items.insert(key.clone(), StaticProperty::try_from(item)?);
             }
         }
         let description = object.definition().description();
-        Self::new(description, items)
+        Ok(Self::new(description, items))
     }
 }
 
@@ -101,10 +99,10 @@ impl TreePrint for StaticObject {
             &self.definition.description()
         );
         let next_prefix = Self::next_prefix(prefix, last);
-        let keys: Vec<_> = self.items.keys().collect();
-        for (i, key) in keys.iter().enumerate() {
-            let is_last = i == keys.len() - 1;
-            self.items[*key].tree_print(key.as_str(), &next_prefix, is_last);
+        let entries: Vec<_> = self.items.iter().collect();
+        for (i, (key, item)) in entries.iter().enumerate() {
+            let is_last = i == entries.len() - 1;
+            item.tree_print(key.as_str(), &next_prefix, is_last);
         }
     }
 }

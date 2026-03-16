@@ -70,15 +70,39 @@ impl PartialEq for ShareableString {
     }
 }
 
+impl PartialEq<str> for ShareableString {
+    fn eq(&self, other: &str) -> bool {
+        &*self.data == other
+    }
+}
+
 impl PartialEq<&str> for ShareableString {
     fn eq(&self, other: &&str) -> bool {
         &*self.data == *other
     }
 }
 
+impl PartialEq<ShareableString> for str {
+    fn eq(&self, other: &ShareableString) -> bool {
+        self == &*other.data
+    }
+}
+
+impl PartialEq<ShareableString> for &str {
+    fn eq(&self, other: &ShareableString) -> bool {
+        *self == &*other.data
+    }
+}
+
 impl PartialEq<String> for ShareableString {
     fn eq(&self, other: &String) -> bool {
         &*self.data == other.as_str()
+    }
+}
+
+impl PartialEq<ShareableString> for String {
+    fn eq(&self, other: &ShareableString) -> bool {
+        self.as_str() == &*other.data
     }
 }
 
@@ -111,6 +135,42 @@ impl Ord for ShareableString {
 impl PartialOrd for ShareableString {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+impl PartialOrd<str> for ShareableString {
+    fn partial_cmp(&self, other: &str) -> Option<std::cmp::Ordering> {
+        self.as_str().partial_cmp(other)
+    }
+}
+
+impl PartialOrd<&str> for ShareableString {
+    fn partial_cmp(&self, other: &&str) -> Option<std::cmp::Ordering> {
+        self.as_str().partial_cmp(*other)
+    }
+}
+
+impl PartialOrd<ShareableString> for str {
+    fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
+        self.partial_cmp(other.as_str())
+    }
+}
+
+impl PartialOrd<ShareableString> for &str {
+    fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
+        (*self).partial_cmp(other.as_str())
+    }
+}
+
+impl PartialOrd<String> for ShareableString {
+    fn partial_cmp(&self, other: &String) -> Option<std::cmp::Ordering> {
+        self.as_str().partial_cmp(other.as_str())
+    }
+}
+
+impl PartialOrd<ShareableString> for String {
+    fn partial_cmp(&self, other: &ShareableString) -> Option<std::cmp::Ordering> {
+        self.as_str().partial_cmp(other.as_str())
     }
 }
 
@@ -206,11 +266,50 @@ mod tests {
     fn test_equality_with_str_and_string() {
         let s = ShareableString::new("hello");
 
+        // ShareableString with &str
         assert_eq!(s, "hello");
         assert_ne!(s, "world");
 
+        // &str with ShareableString
+        assert_eq!("hello", s);
+        assert_ne!("world", s);
+
+        // ShareableString with String
         assert_eq!(s, String::from("hello"));
         assert_ne!(s, String::from("world"));
+
+        // String with ShareableString
+        assert_eq!(String::from("hello"), s);
+        assert_ne!(String::from("world"), s);
+
+        // Explicit str slice with ShareableString
+        let slice: &str = "hello";
+        assert_eq!(slice, s);
+    }
+
+    #[test]
+    fn test_partial_ord_with_str_and_string() {
+        let s = ShareableString::new("m");
+
+        // ShareableString with &str
+        assert!(s > "a");
+        assert!(s < "z");
+        assert!(s <= "m");
+        assert!(s >= "m");
+
+        // &str with ShareableString
+        assert!("a" < s);
+        assert!("z" > s);
+        assert!("m" <= s);
+        assert!("m" >= s);
+
+        // ShareableString with String
+        assert!(s > String::from("a"));
+        assert!(s < String::from("z"));
+
+        // String with ShareableString
+        assert!(String::from("a") < s);
+        assert!(String::from("z") > s);
     }
 
     #[test]

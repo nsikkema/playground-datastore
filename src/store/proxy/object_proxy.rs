@@ -3,7 +3,7 @@ use crate::shareable_string::ShareableString;
 use crate::store::{
     BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, TableProxy, TreePrint,
 };
-use crate::{StoreError, StorePath};
+use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a top-level object in the store.
 #[derive(Debug)]
@@ -11,7 +11,7 @@ pub struct ObjectProxy {
     path: StorePath,
     store: Store,
     definition: ObjectDefinition,
-    keys: Vec<ShareableString>,
+    keys: Vec<StoreKey>,
     object_hash: StoreHashContainer,
     last_sync_hash: [u8; 32],
 }
@@ -22,7 +22,7 @@ impl ObjectProxy {
         path: StorePath,
         store: Store,
         definition: ObjectDefinition,
-        keys: Vec<ShareableString>,
+        keys: Vec<StoreKey>,
         object_hash: StoreHashContainer,
         last_sync_hash: [u8; 32],
     ) -> Self {
@@ -42,14 +42,14 @@ impl ObjectProxy {
     }
 
     /// Returns the keys of the properties in the object.
-    pub fn keys(&self) -> &Vec<ShareableString> {
+    pub fn keys(&self) -> &Vec<StoreKey> {
         &self.keys
     }
 
     /// Checks if a property with the given key exists in the object.
     pub fn check_key<S: Into<ShareableString>>(&self, key: S) -> Result<bool, StoreError> {
         let key = key.into();
-        Ok(self.keys.iter().any(|k| k.as_ref() == key.as_ref()))
+        Ok(self.keys.iter().any(|k| k == &key))
     }
 
     /// Syncs the proxy with the latest data from the store.
@@ -64,8 +64,9 @@ impl ObjectProxy {
         }
 
         let key = key.into();
-        self.check_key(&key)?;
-        let path = self.path.clone().to_builder().property(key).build()?;
+        self.check_key(key.clone())?;
+        let store_key = StoreKey::new_unsafe(key);
+        let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.basic(&path)
     }
 
@@ -76,8 +77,9 @@ impl ObjectProxy {
         }
 
         let key = key.into();
-        self.check_key(&key)?;
-        let path = self.path.clone().to_builder().property(key).build()?;
+        self.check_key(key.clone())?;
+        let store_key = StoreKey::new_unsafe(key);
+        let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.table(&path)
     }
 
@@ -91,13 +93,14 @@ impl ObjectProxy {
         }
 
         let key = key.into();
-        self.check_key(&key)?;
-        let path = self.path.clone().to_builder().property(key).build()?;
+        self.check_key(key.clone())?;
+        let store_key = StoreKey::new_unsafe(key);
+        let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.container(&path)
     }
 
     /// Returns all property keys in the object.
-    pub fn all_property_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+    pub fn all_property_keys(&self) -> Result<Vec<StoreKey>, StoreError> {
         Ok(self.keys.clone())
     }
 
@@ -135,7 +138,8 @@ impl ProxyStoreTrait for ObjectProxy {
             return Ok(());
         }
 
-        let proxy = self.store.object(&self.path)?;
+        let key = self.path.object_key();
+        let proxy = self.store.object(key)?;
         self.keys = proxy.keys;
         self.last_sync_hash = proxy.last_sync_hash;
 
@@ -147,6 +151,7 @@ impl ProxyStoreTrait for ObjectProxy {
     }
 
     fn object(&self) -> Result<ObjectProxy, StoreError> {
-        self.store.object(&self.path)
+        let key = self.path.object_key();
+        self.store.object(key)
     }
 }

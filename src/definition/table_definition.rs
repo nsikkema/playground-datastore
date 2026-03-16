@@ -9,7 +9,7 @@ use std::sync::Arc;
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct TableDefinition {
     description: ShareableString,
-    columns: Arc<BTreeMap<ShareableString, BasicDefinition>>,
+    columns: Arc<BTreeMap<StoreKey, BasicDefinition>>,
 }
 
 impl TableDefinition {
@@ -20,7 +20,7 @@ impl TableDefinition {
     ) -> Self {
         let mut cols = BTreeMap::new();
         for (id, item) in columns {
-            let key = id.into().key;
+            let key = id.into();
             cols.insert(key, item);
         }
         Self {
@@ -46,21 +46,24 @@ impl TableDefinition {
 
     /// Returns true if the table contains a column with the specified key string.
     pub fn contains_key_str(&self, key: &str) -> bool {
-        self.columns.contains_key(key)
+        self.columns.iter().any(|(k, _)| k.as_str() == key)
     }
 
     /// Returns a reference to the column definition for the specified key string.
     pub fn get_str(&self, key: &str) -> Option<&BasicDefinition> {
-        self.columns.get(key)
+        self.columns
+            .iter()
+            .find(|(k, _)| k.as_str() == key)
+            .map(|(_, v)| v)
     }
 
     /// Returns an iterator over the keys of the columns.
-    pub fn keys(&self) -> impl Iterator<Item = &ShareableString> {
+    pub fn keys(&self) -> impl Iterator<Item = &StoreKey> {
         self.columns.keys()
     }
 
     /// Returns an iterator over the column definitions.
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &BasicDefinition)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &BasicDefinition)> {
         self.columns.iter()
     }
 
@@ -81,7 +84,7 @@ impl TableDefinition {
             columns: Arc::new(
                 self.columns
                     .iter()
-                    .map(|(id, item)| (store.launder(id), item.launder(store)))
+                    .map(|(id, item)| (id.launder(store), item.launder(store)))
                     .collect(),
             ),
         }

@@ -40,7 +40,7 @@ impl StructItemDefinition {
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructDefinition {
     description: ShareableString,
-    item_type: Arc<BTreeMap<ShareableString, StructItemDefinition>>,
+    item_type: Arc<BTreeMap<StoreKey, StructItemDefinition>>,
 }
 
 impl StructDefinition {
@@ -51,7 +51,7 @@ impl StructDefinition {
     ) -> Self {
         let mut items = BTreeMap::new();
         for (k, v) in item_type {
-            let key = k.into().key;
+            let key = k.into();
             items.insert(key, v.into());
         }
         Self {
@@ -72,7 +72,10 @@ impl StructDefinition {
 
     /// Returns a reference to the struct item definition for the specified key string.
     pub fn get_str(&self, key: &str) -> Option<&StructItemDefinition> {
-        self.item_type.get(key)
+        self.item_type
+            .iter()
+            .find(|(k, _)| k.as_str() == key)
+            .map(|(_, v)| v)
     }
 
     /// Returns true if the struct contains an item with the specified key.
@@ -81,17 +84,17 @@ impl StructDefinition {
     }
 
     /// Returns an iterator over the keys of the struct items.
-    pub fn keys(&self) -> impl Iterator<Item = &ShareableString> {
+    pub fn keys(&self) -> impl Iterator<Item = &StoreKey> {
         self.item_type.keys()
     }
 
     /// Returns true if the struct contains an item with the specified key string.
     pub fn contains_key_str(&self, key: &str) -> bool {
-        self.item_type.contains_key(key)
+        self.item_type.iter().any(|(k, _)| k.as_str() == key)
     }
 
     /// Returns an iterator over the struct item definitions.
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StructItemDefinition)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StructItemDefinition)> {
         self.item_type.iter()
     }
 
@@ -112,7 +115,7 @@ impl StructDefinition {
             item_type: Arc::new(
                 self.item_type
                     .iter()
-                    .map(|(k, v)| (store.launder(k), v.launder(store)))
+                    .map(|(k, v)| (k.launder(store), v.launder(store)))
                     .collect(),
             ),
         }

@@ -44,7 +44,7 @@ fn test_complex_proxy_structure() {
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     // 5. Access Struct Container Proxy
-    let struct_proxy = obj_proxy.container("outer_struct").unwrap();
+    let struct_proxy = obj_proxy.container(store_key!("outer_struct")).unwrap();
     assert_eq!(struct_proxy.description().as_ref(), "Nested Struct");
 
     // 6. Access Table Proxy from Struct
@@ -53,7 +53,7 @@ fn test_complex_proxy_structure() {
         .path()
         .clone()
         .to_builder()
-        .struct_item("table")
+        .struct_item(store_key!("table"))
         .build()
         .unwrap();
     let mut table_proxy = store.table(&table_path).unwrap();
@@ -63,7 +63,7 @@ fn test_complex_proxy_structure() {
         .path()
         .clone()
         .to_builder()
-        .struct_item("inner_basic")
+        .struct_item(store_key!("inner_basic"))
         .build()
         .unwrap();
     let mut basic_proxy = store.basic(&basic_path).unwrap();
@@ -90,7 +90,7 @@ fn test_complex_proxy_structure() {
     assert!(!table_proxy.has_changed());
 
     // 11. Verify changes via new proxies
-    let _obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
+    let _obj_proxy2 = store.object(obj_proxy.path().object_key().clone()).unwrap();
     let basic_proxy2 = store.basic(&basic_path).unwrap();
     assert_eq!(basic_proxy2.value().as_ref(), "100");
 
@@ -130,7 +130,7 @@ fn test_proxy_basic_operations() {
     assert_eq!(obj_proxy.description().as_ref(), "Test Object");
 
     // 3. Get Basic Property Proxy
-    let mut name_proxy = obj_proxy.basic("name").unwrap();
+    let mut name_proxy = obj_proxy.basic(store_key!("name")).unwrap();
     assert_eq!(name_proxy.value().as_ref(), "");
 
     // 4. Set Value and Push
@@ -140,8 +140,8 @@ fn test_proxy_basic_operations() {
     assert!(!name_proxy.has_changed());
 
     // 5. Verify in store (via another proxy)
-    let mut obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
-    let name_proxy2 = obj_proxy2.basic("name").unwrap();
+    let mut obj_proxy2 = store.object(obj_proxy.path().object_key().clone()).unwrap();
+    let name_proxy2 = obj_proxy2.basic(store_key!("name")).unwrap();
     assert_eq!(name_proxy2.value().as_ref(), "Junie");
 
     // 6. Test Pull
@@ -183,7 +183,7 @@ fn test_proxy_deleted_object() {
     assert!(!obj_proxy.is_valid());
 
     // 5. Verify operations on invalid proxy fail
-    assert!(obj_proxy.basic("name").is_err());
+    assert!(obj_proxy.basic(store_key!("name")).is_err());
     assert!(obj_proxy.pull().is_err());
 }
 
@@ -205,8 +205,8 @@ fn test_proxy_multiple_properties() {
     let obj_key = store_key!("user_1");
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
-    let mut name_proxy = obj_proxy.basic("name").unwrap();
-    let mut age_proxy = obj_proxy.basic("age").unwrap();
+    let mut name_proxy = obj_proxy.basic(store_key!("name")).unwrap();
+    let mut age_proxy = obj_proxy.basic(store_key!("age")).unwrap();
 
     name_proxy.set_value("Alice");
     age_proxy.set_value("30");
@@ -215,9 +215,23 @@ fn test_proxy_multiple_properties() {
     age_proxy.push().unwrap();
 
     // Verify both are updated
-    let mut obj_proxy2 = store.object(&obj_proxy.path()).unwrap();
-    assert_eq!(obj_proxy2.basic("name").unwrap().value().as_ref(), "Alice");
-    assert_eq!(obj_proxy2.basic("age").unwrap().value().as_ref(), "30");
+    let mut obj_proxy2 = store.object(obj_proxy.path().object_key().clone()).unwrap();
+    assert_eq!(
+        obj_proxy2
+            .basic(store_key!("name"))
+            .unwrap()
+            .value()
+            .as_ref(),
+        "Alice"
+    );
+    assert_eq!(
+        obj_proxy2
+            .basic(store_key!("age"))
+            .unwrap()
+            .value()
+            .as_ref(),
+        "30"
+    );
 }
 
 #[test]
@@ -233,15 +247,15 @@ fn test_proxy_sync_from_store() {
 
     let obj_key = store_key!("user_2");
     let mut proxy1 = store.create_object(obj_key, &obj_def).unwrap();
-    let mut proxy2 = store.object(&proxy1.path()).unwrap();
+    let mut proxy2 = store.object(obj_key).unwrap();
 
     // Modify via proxy1
-    let mut name_proxy1 = proxy1.basic("name").unwrap();
+    let mut name_proxy1 = proxy1.basic(store_key!("name")).unwrap();
     name_proxy1.set_value("Bob");
     name_proxy1.push().unwrap();
 
     // proxy2 still has old value until pull
-    let name_proxy2 = proxy2.basic("name").unwrap();
+    let name_proxy2 = proxy2.basic(store_key!("name")).unwrap();
     // It seems proxy2 already sees "Bob" because they might share the same underlying Basic object
     // if object doesn't deep clone. Let's check.
     assert_eq!(name_proxy2.value().as_ref(), "Bob");
@@ -285,7 +299,7 @@ fn test_proxy_get_object() {
     let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
 
     // 3. Get Basic Property Proxy
-    let name_proxy = obj_proxy.basic("name").unwrap();
+    let name_proxy = obj_proxy.basic(store_key!("name")).unwrap();
 
     // 4. Get object from name_proxy
     let obj_proxy_from_name = name_proxy.object().unwrap();

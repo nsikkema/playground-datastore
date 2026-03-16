@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// The internal implementation of the data store.
 #[derive(Debug)]
 pub(crate) struct StoreInternal {
-    objects: RwLock<HashMap<ShareableString, Object>>,
+    objects: RwLock<HashMap<StoreKey, Object>>,
     pub(crate) string_store: SharedStringStore,
     blake3_hash: RwLock<[u8; 32]>,
 }
@@ -36,7 +36,7 @@ impl StoreInternal {
     }
 
     /// Updates the BLAKE3 hash based on the provided objects.
-    fn update_blake3_hash(&self, objects: &HashMap<ShareableString, Object>) {
+    fn update_blake3_hash(&self, objects: &HashMap<StoreKey, Object>) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -46,8 +46,8 @@ impl StoreInternal {
         h.update(&(objects.len() as u64).to_le_bytes());
 
         // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = objects.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
+        let mut keys: Vec<&StoreKey> = objects.keys().collect();
+        keys.sort_by(|a, b| a.as_str().cmp(b.as_str()));
 
         for key in keys {
             h.update(&key.current_blake3_hash());
@@ -62,7 +62,7 @@ impl StoreInternal {
     /// Creates a new object in the store.
     pub(crate) fn create_object(
         &self,
-        object_key: &ShareableString,
+        object_key: &StoreKey,
         definition: &ObjectDefinition,
     ) -> Result<(), StoreError> {
         let mut writer = self.objects.write();
@@ -80,11 +80,11 @@ impl StoreInternal {
     }
 
     /// Deletes an object from the store.
-    pub(crate) fn delete_object(&self, object_key: &ShareableString) -> Result<(), StoreError> {
+    pub(crate) fn delete_object<K: AsRef<str>>(&self, object_key: K) -> Result<(), StoreError> {
         let mut writer = self.objects.write();
 
         let mut object = writer
-            .remove(object_key)
+            .remove(object_key.as_ref())
             .ok_or(StoreError::ObjectNotFound)?;
 
         object.clear_hash_all();
@@ -97,7 +97,7 @@ impl StoreInternal {
     /// Adds an existing object to the store.
     pub(crate) fn add_object(
         &self,
-        object_key: &ShareableString,
+        object_key: &StoreKey,
         object: &Object,
     ) -> Result<(), StoreError> {
         let laundered_object = object.launder(&self.string_store);
@@ -107,7 +107,10 @@ impl StoreInternal {
             return Err(StoreError::ObjectKeyAlreadyExists);
         }
 
-        writer.insert(self.string_store.launder(object_key), laundered_object);
+        writer.insert(
+            StoreKey::new(self.string_store.launder(&object_key.key)).unwrap(),
+            laundered_object,
+        );
 
         self.update_blake3_hash(&writer);
 
@@ -115,11 +118,14 @@ impl StoreInternal {
     }
 
     /// Returns a copy of the object for the specified object key.
-    pub(crate) fn get_object(&self, object_key: &ShareableString) -> Result<Object, StoreError> {
+    pub(crate) fn get_object<K: Into<ShareableString>>(
+        &self,
+        object_key: K,
+    ) -> Result<Object, StoreError> {
         let reader = self.objects.read();
 
         reader
-            .get(object_key)
+            .get(&object_key.into())
             .cloned()
             .ok_or(StoreError::ObjectNotFound)
     }
@@ -145,21 +151,23 @@ impl Store {
         object_key: K,
         definition: &ObjectDefinition,
     ) -> Result<ObjectProxy, StoreError> {
-        let object_key = object_key.into().key;
-        let object_key = self.launder(object_key);
+        let object_key = object_key.into().launder(&self.internal.string_store);
         self.internal.create_object(&object_key, definition)?;
-        let path = StorePath::builder(object_key).build();
-        self.object(&path)
+        self.object(object_key)
     }
 
     /// Returns an `ObjectProxy` for the specified path.
-    pub fn object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
-        let object_key = store_path.object_key();
-        let object = self.internal.get_object(object_key)?;
+    pub fn object<S: Into<ShareableString>>(&self, key: S) -> Result<ObjectProxy, StoreError> {
+        let key = key.into();
+        let object = self.internal.get_object(key.clone())?;
         let definition = object.definition().clone();
+
         let keys = object.keys();
         let object_hash = object.hash_container().clone();
         let last_sync_hash = object.current_blake3_hash();
+
+        let store_path = StorePath::builder(StoreKey::new_unsafe(key)).build();
+
         Ok(ObjectProxy::new(
             store_path.clone(),
             self.clone(),
@@ -171,10 +179,10 @@ impl Store {
     }
 
     /// Internal method to get an item associated with the given key from the specified path.
-    pub(crate) fn get_item_at_path(
+    pub(crate) fn get_item_at_path<K: AsRef<str>>(
         &self,
         store_path: &StorePath,
-        key: &ShareableString,
+        key: K,
     ) -> Result<ContainerItem, StoreError> {
         let segments = store_path.segments();
         if segments.is_empty() {
@@ -188,9 +196,9 @@ impl Store {
     }
 
     /// Internal method to get an object at the specified path.
-    pub(crate) fn get_object_internal(
+    pub(crate) fn get_object_internal<K: Into<ShareableString>>(
         &self,
-        object_key: &ShareableString,
+        object_key: K,
     ) -> Result<Object, StoreError> {
         self.internal.get_object(object_key)
     }
@@ -341,13 +349,12 @@ impl Store {
     }
 
     /// Deletes the object with the specified key.
-    pub fn delete_object(&self, object_key: StoreKey) -> Result<(), StoreError> {
-        let object_key = &object_key.key;
+    pub fn delete_object<K: AsRef<str>>(&self, object_key: K) -> Result<(), StoreError> {
         self.internal.delete_object(object_key)
     }
 
     /// Returns a list of all object keys in the store.
-    pub fn object_keys(&self) -> Result<Vec<ShareableString>, StoreError> {
+    pub fn object_keys(&self) -> Result<Vec<StoreKey>, StoreError> {
         let reader = self.internal.objects.read();
         Ok(reader.keys().cloned().collect())
     }
@@ -357,8 +364,12 @@ impl Store {
         *self.internal.blake3_hash.read()
     }
 
-    /// Launders a `ShareableString` through the store's string store.
-    pub fn launder(&self, string: ShareableString) -> ShareableString {
+    /// Launders a `StoreKey` through the store's string store.
+    pub fn launder_key(&self, key: StoreKey) -> StoreKey {
+        key.launder(&self.internal.string_store)
+    }
+
+    pub fn launder_string(&self, string: ShareableString) -> ShareableString {
         self.internal.string_store.launder(string)
     }
 
@@ -369,14 +380,12 @@ impl Store {
         source_store: &Store,
         source_object_key: StoreKey,
     ) -> Result<ObjectProxy, StoreError> {
-        let object_key = self.launder(object_key.key);
-        let source_object_key = source_object_key.key;
+        let object_key = self.launder_key(object_key);
         let container = source_store.internal.get_object(&source_object_key)?;
         let container = container.launder(&self.internal.string_store);
 
         self.internal.add_object(&object_key, &container)?;
-        let path = StorePath::builder(object_key).build();
-        self.object(&path)
+        self.object(object_key)
     }
 
     /// Prints the entire store as a tree for debugging.
@@ -414,7 +423,7 @@ impl Store {
         let string_store = SharedStringStore::new();
         let mut objects = HashMap::new();
         for (key, static_object) in static_store.objects() {
-            let key = string_store.launder(key.clone());
+            let key = key.launder(&string_store);
             let object = Object::from(static_object);
             let object = object.launder(&string_store);
             objects.insert(key, object);
@@ -447,7 +456,7 @@ impl Store {
         }
 
         for (key, static_object) in static_store.objects() {
-            let laundered_key = self.launder(key.clone());
+            let laundered_key = self.launder_key(key.clone());
             if let Some(object) = objects.get_mut(&laundered_key)
                 && object.definition() == static_object.definition()
             {
@@ -497,7 +506,7 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
 
 impl Segment {
     /// Returns the key associated with the segment.
-    pub(crate) fn key(&self) -> &ShareableString {
+    pub(crate) fn key(&self) -> &StoreKey {
         match self {
             Segment::Property(key) => key,
             Segment::MapKey(key) => key,
