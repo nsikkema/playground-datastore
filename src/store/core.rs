@@ -1,7 +1,7 @@
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::StaticStore;
-use crate::store::data::{Basic, Container, ContainerDefinition, ContainerItem, Table};
+use crate::store::data::{Basic, Container, ContainerItem, Object, Table};
 use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
 use crate::{Segment, StoreError, StoreKey, StorePath};
@@ -12,7 +12,7 @@ use std::sync::Arc;
 /// The internal implementation of the data store.
 #[derive(Debug)]
 pub(crate) struct StoreInternal {
-    objects: RwLock<HashMap<ShareableString, Container>>,
+    objects: RwLock<HashMap<ShareableString, Object>>,
     pub(crate) string_store: SharedStringStore,
     blake3_hash: RwLock<[u8; 32]>,
 }
@@ -36,7 +36,7 @@ impl StoreInternal {
     }
 
     /// Updates the BLAKE3 hash based on the provided objects.
-    fn update_blake3_hash(&self, objects: &HashMap<ShareableString, Container>) {
+    fn update_blake3_hash(&self, objects: &HashMap<ShareableString, Object>) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -74,7 +74,7 @@ impl StoreInternal {
         let launder_definition = definition.launder(&self.string_store);
         writer.insert(
             object_key.clone(),
-            Container::new_object(&launder_definition),
+            Object::new(&launder_definition),
         );
 
         self.update_blake3_hash(&writer);
@@ -97,28 +97,28 @@ impl StoreInternal {
         Ok(())
     }
 
-    /// Adds an existing container as an object to the store.
+    /// Adds an existing object to the store.
     pub(crate) fn add_object(
         &self,
         object_key: &ShareableString,
-        container: &Container,
+        object: &Object,
     ) -> Result<(), StoreError> {
-        let laundered_container = container.launder(&self.string_store);
+        let laundered_object = object.launder(&self.string_store);
         let mut writer = self.objects.write();
 
         if writer.contains_key(object_key) {
             return Err(StoreError::ObjectKeyAlreadyExists);
         }
 
-        writer.insert(self.string_store.launder(object_key), laundered_container);
+        writer.insert(self.string_store.launder(object_key), laundered_object);
 
         self.update_blake3_hash(&writer);
 
         Ok(())
     }
 
-    /// Returns a copy of the container for the specified object key.
-    pub(crate) fn get_object(&self, object_key: &ShareableString) -> Result<Container, StoreError> {
+    /// Returns a copy of the object for the specified object key.
+    pub(crate) fn get_object(&self, object_key: &ShareableString) -> Result<Object, StoreError> {
         let reader = self.objects.read();
 
         reader
@@ -158,22 +158,41 @@ impl Store {
     /// Returns an `ObjectProxy` for the specified path.
     pub fn object(&self, store_path: &StorePath) -> Result<ObjectProxy, StoreError> {
         let object_key = store_path.object_key();
-        let container = self.internal.get_object(object_key)?;
-        if let ContainerDefinition::Object(definition) = container.definition() {
-            let keys = container.keys();
-            let object_hash = container.hash_container().clone();
-            let last_sync_hash = container.current_blake3_hash();
-            Ok(ObjectProxy::new(
-                store_path.clone(),
-                self.clone(),
-                definition.clone(),
-                keys,
-                object_hash,
-                last_sync_hash,
-            ))
-        } else {
-            Err(StoreError::ObjectNotFound)
+        let object = self.internal.get_object(object_key)?;
+        let definition = object.definition().clone();
+        let keys = object.keys();
+        let object_hash = object.hash_container().clone();
+        let last_sync_hash = object.current_blake3_hash();
+        Ok(ObjectProxy::new(
+            store_path.clone(),
+            self.clone(),
+            definition,
+            keys,
+            object_hash,
+            last_sync_hash,
+        ))
+    }
+
+    /// Internal method to get an item associated with the given key from the specified path.
+    pub(crate) fn get_item_at_path(
+        &self,
+        store_path: &StorePath,
+        key: &ShareableString,
+    ) -> Result<ContainerItem, StoreError> {
+        let segments = store_path.segments();
+        if segments.is_empty() {
+            let object_key = store_path.object_key();
+            let object = self.internal.get_object(object_key)?;
+            return object.get_item(key);
         }
+
+        let container = self.get_container_internal(store_path)?;
+        container.get_item(key)
+    }
+
+    /// Internal method to get an object at the specified path.
+    pub(crate) fn get_object_internal(&self, object_key: &ShareableString) -> Result<Object, StoreError> {
+        self.internal.get_object(object_key)
     }
 
     /// Internal method to get a container at the specified path.
@@ -182,19 +201,28 @@ impl Store {
         store_path: &StorePath,
     ) -> Result<Container, StoreError> {
         let object_key = store_path.object_key();
-        let mut current_container = self.internal.get_object(object_key)?;
+        let object = self.internal.get_object(object_key)?;
+
+        let mut current_container: Option<Container> = None;
 
         for segment in store_path.segments() {
             match segment {
                 Segment::Property(key) | Segment::MapKey(key) | Segment::StructItem(key) => {
-                    match current_container.get_item(key)? {
-                        ContainerItem::Container(c) => current_container = c,
+                    let item = if let Some(container) = &current_container {
+                        container.get_item(key)?
+                    } else {
+                        object.get_item(key)?
+                    };
+
+                    match item {
+                        ContainerItem::Container(c) => current_container = Some(c),
                         _ => return Err(StoreError::PropertyNotFound),
                     }
                 }
             }
         }
-        Ok(current_container)
+
+        current_container.ok_or(StoreError::PropertyNotFound)
     }
 
     /// Returns a `ContainerProxy` for the specified path.
@@ -216,15 +244,10 @@ impl Store {
 
     /// Returns a `TableProxy` for the specified path.
     pub fn table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
-        let segments = store_path.segments();
-        if segments.is_empty() {
-            return Err(StoreError::InvalidPath);
-        }
-
         let (parent_path, last_segment) = split_path(store_path)?;
-        let container = self.get_container_internal(&parent_path)?;
+        let item = self.get_item_at_path(&parent_path, last_segment.key())?;
 
-        if let ContainerItem::Table(table) = container.get_item(last_segment.key())? {
+        if let ContainerItem::Table(table) = item {
             Ok(TableProxy::new(store_path.clone(), self.clone(), table))
         } else {
             Err(StoreError::PropertyNotFound)
@@ -234,6 +257,17 @@ impl Store {
     /// Sets the table data at the specified path.
     pub(crate) fn set_table(&self, store_path: &StorePath, data: &Table) -> Result<(), StoreError> {
         let (parent_path, last_segment) = split_path(store_path)?;
+        let segments = parent_path.segments();
+
+        if segments.is_empty() {
+            let mut object = self.internal.get_object(parent_path.object_key())?;
+            object.set_item(last_segment.key(), ContainerItem::Table(data.clone()))?;
+            let mut writer = self.internal.objects.write();
+            writer.insert(parent_path.object_key().clone(), object);
+            self.internal.update_blake3_hash(&writer);
+            return Ok(());
+        }
+
         let mut container = self.get_container_internal(&parent_path)?;
         container.set_item(last_segment.key(), ContainerItem::Table(data.clone()))?;
 
@@ -242,15 +276,10 @@ impl Store {
 
     /// Returns a `BasicProxy` for the specified path.
     pub fn basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
-        let segments = store_path.segments();
-        if segments.is_empty() {
-            return Err(StoreError::InvalidPath);
-        }
-
         let (parent_path, last_segment) = split_path(store_path)?;
-        let container = self.get_container_internal(&parent_path)?;
+        let item = self.get_item_at_path(&parent_path, last_segment.key())?;
 
-        if let ContainerItem::Basic(basic) = container.get_item(last_segment.key())? {
+        if let ContainerItem::Basic(basic) = item {
             Ok(BasicProxy::new(store_path.clone(), self.clone(), basic))
         } else {
             Err(StoreError::PropertyNotFound)
@@ -260,6 +289,17 @@ impl Store {
     /// Sets the basic data at the specified path.
     pub(crate) fn set_basic(&self, store_path: &StorePath, data: &Basic) -> Result<(), StoreError> {
         let (parent_path, last_segment) = split_path(store_path)?;
+        let segments = parent_path.segments();
+
+        if segments.is_empty() {
+            let mut object = self.internal.get_object(parent_path.object_key())?;
+            object.set_item(last_segment.key(), ContainerItem::Basic(data.clone()))?;
+            let mut writer = self.internal.objects.write();
+            writer.insert(parent_path.object_key().clone(), object);
+            self.internal.update_blake3_hash(&writer);
+            return Ok(());
+        }
+
         let mut container = self.get_container_internal(&parent_path)?;
         container.set_item(last_segment.key(), ContainerItem::Basic(data.clone()))?;
 
@@ -276,12 +316,19 @@ impl Store {
         let segments = path.segments();
 
         if segments.is_empty() {
-            // Updating a top-level object
-            {
-                let mut writer = self.internal.objects.write();
-                writer.insert(path.object_key().clone(), container);
-                self.internal.update_blake3_hash(&writer);
-            }
+            // Updating a top-level object - this should be handled by a separate method if needed,
+            // but for now let's just return an error as Container cannot be Object anymore.
+            return Err(StoreError::ObjectNotFound);
+        }
+
+        if segments.len() == 1 {
+            let mut object = self.internal.get_object(path.object_key())?;
+            let last_segment = segments.first().unwrap();
+            object.set_item(last_segment.key(), ContainerItem::Container(container))?;
+
+            let mut writer = self.internal.objects.write();
+            writer.insert(path.object_key().clone(), object);
+            self.internal.update_blake3_hash(&writer);
             return Ok(());
         }
 
@@ -368,9 +415,9 @@ impl Store {
         let mut objects = HashMap::new();
         for (key, static_object) in static_store.objects() {
             let key = string_store.launder(key.clone());
-            let container = Container::from(static_object);
-            let container = container.launder(&string_store);
-            objects.insert(key, container);
+            let object = Object::from(static_object);
+            let object = object.launder(&string_store);
+            objects.insert(key, object);
         }
 
         let internal = StoreInternal {
@@ -397,18 +444,17 @@ impl Store {
 
         for (key, static_object) in static_store.objects() {
             let laundered_key = self.launder(key.clone());
-            if let Some(container) = objects.get_mut(&laundered_key)
-                && let ContainerDefinition::Object(def) = container.definition()
-                && def == static_object.definition()
+            if let Some(object) = objects.get_mut(&laundered_key)
+                && object.definition() == static_object.definition()
             {
-                container.update_from_static(static_object.items());
+                object.update_from_static(static_object.items());
                 continue;
             }
 
             // If doesn't exist or definition mismatch, replace/add
-            let container = Container::from(static_object);
-            let container = container.launder(&self.internal.string_store);
-            objects.insert(laundered_key, container);
+            let object = Object::from(static_object);
+            let object = object.launder(&self.internal.string_store);
+            objects.insert(laundered_key, object);
         }
 
         self.internal.update_blake3_hash(&objects);

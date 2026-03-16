@@ -20,7 +20,6 @@ impl From<ContainerItem> for StaticProperty {
             ContainerItem::Container(c) => match c.definition() {
                 ContainerDefinition::Struct(_) => Self::Struct(StaticStruct::from(&c)),
                 ContainerDefinition::Map(_) => Self::Map(StaticMap::from(&c)),
-                _ => panic!("Unsupported container type for StaticProperty conversion"),
             },
         }
     }

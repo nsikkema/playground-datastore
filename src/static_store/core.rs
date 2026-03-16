@@ -17,11 +17,9 @@ impl From<&Store> for StaticStore {
         let mut objects = BTreeMap::new();
         if let Ok(keys) = store.object_keys() {
             for key in keys {
-                if let Ok(container) =
-                    store.get_container_internal(&crate::StorePath::builder(key.clone()).build())
-                {
+                if let Ok(object) = store.get_object_internal(&key) {
                     let store_key = StoreKey::new(key.clone()).expect("Valid key from store");
-                    objects.insert(store_key, StaticObject::from(&container));
+                    objects.insert(store_key, StaticObject::from(&object));
                 }
             }
         }

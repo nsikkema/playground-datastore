@@ -1,11 +1,7 @@
 use crate::StoreError;
-use crate::definition::{
-    MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
-};
+use crate::definition::{MapDefinition, StructDefinition, StructItemDefinition};
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::static_store::data::{
-    StaticMap, StaticObject, StaticProperty, StaticStruct, StaticStructItem,
-};
+use crate::static_store::data::{StaticMap, StaticProperty, StaticStruct, StaticStructItem};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
 use std::collections::HashMap;
 
@@ -27,8 +23,6 @@ pub enum ContainerDefinition {
     Struct(StructDefinition),
     /// A map definition.
     Map(MapDefinition),
-    /// An object definition.
-    Object(ObjectDefinition),
 }
 
 /// A container that holds multiple `ContainerItem`s.
@@ -42,42 +36,6 @@ pub(crate) struct Container {
 }
 
 impl Container {
-    /// Creates a new `Container` representing an object.
-    pub(crate) fn new_object(definition: &ObjectDefinition) -> Self {
-        let mut items = HashMap::new();
-        for (key, item_definition) in definition.iter() {
-            match item_definition.item_type() {
-                PropertyDefinitionType::Basic(basic) => {
-                    items.insert(key.clone(), ContainerItem::Basic(Basic::new(basic.clone())));
-                }
-                PropertyDefinitionType::Struct(_struct) => {
-                    items.insert(
-                        key.clone(),
-                        ContainerItem::Container(Self::new_struct(_struct.clone())),
-                    );
-                }
-                PropertyDefinitionType::Table(table) => {
-                    items.insert(key.clone(), ContainerItem::Table(Table::new(table.clone())));
-                }
-                PropertyDefinitionType::Map(map) => {
-                    items.insert(
-                        key.clone(),
-                        ContainerItem::Container(Self::new_map(map.clone())),
-                    );
-                }
-            }
-        }
-        let mut container = Container {
-            definition: ContainerDefinition::Object(definition.clone()),
-            items,
-            blake3_hash: StoreHashContainer::default(),
-            locked: true,
-        };
-
-        container.update_blake3_hash();
-
-        container
-    }
 
     /// Returns a new `Container` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
@@ -94,7 +52,6 @@ impl Container {
         let laundered_definition = match &self.definition {
             ContainerDefinition::Struct(s) => ContainerDefinition::Struct(s.launder(store)),
             ContainerDefinition::Map(m) => ContainerDefinition::Map(m.launder(store)),
-            ContainerDefinition::Object(o) => ContainerDefinition::Object(o.launder(store)),
         };
 
         let mut laundered = Self {
@@ -194,25 +151,6 @@ impl Container {
         }
     }
 
-    pub(crate) fn update_from_static(
-        &mut self,
-        items: &std::collections::BTreeMap<ShareableString, StaticProperty>,
-    ) {
-        for (key, static_property) in items {
-            if let Some(item) = self.items.get_mut(key)
-                && item.matches_static(static_property)
-            {
-                item.update_from_static(static_property);
-                continue;
-            }
-
-            // If doesn't exist or type mismatch, replace it.
-            self.items
-                .insert(key.clone(), ContainerItem::from(static_property));
-        }
-        self.update_blake3_hash();
-    }
-
     pub(crate) fn update_from_static_struct(
         &mut self,
         items: &std::collections::BTreeMap<ShareableString, StaticStructItem>,
@@ -255,23 +193,6 @@ impl Container {
     }
 }
 
-impl From<&StaticObject> for Container {
-    fn from(static_object: &StaticObject) -> Self {
-        let items = static_object
-            .items()
-            .iter()
-            .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
-            .collect();
-        let c = Self {
-            definition: ContainerDefinition::Object(static_object.definition().clone()),
-            items,
-            blake3_hash: StoreHashContainer::new(),
-            locked: true,
-        };
-        c.blake3_hash.set(static_object.hash());
-        c
-    }
-}
 
 impl From<&StaticStruct> for Container {
     fn from(static_struct: &StaticStruct) -> Self {
@@ -392,9 +313,6 @@ impl CommonStoreTraitInternal for Container {
             ContainerDefinition::Map(_) => {
                 h.update(b"Map");
             }
-            ContainerDefinition::Object(_) => {
-                h.update(b"Object");
-            }
         }
 
         h.update(&(self.items.len() as u64).to_le_bytes());
@@ -437,12 +355,10 @@ impl TreePrint for Container {
         let type_str = match &self.definition {
             ContainerDefinition::Struct(_) => "Struct",
             ContainerDefinition::Map(_) => "Map",
-            ContainerDefinition::Object(_) => "Object",
         };
         let description = match &self.definition {
             ContainerDefinition::Struct(s) => s.description(),
             ContainerDefinition::Map(m) => m.description(),
-            ContainerDefinition::Object(o) => o.description(),
         };
 
         println!(

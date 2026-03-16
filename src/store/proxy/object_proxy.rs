@@ -103,8 +103,8 @@ impl ObjectProxy {
 
     /// Prints the object as a tree for debugging.
     pub fn tree_print(&self) {
-        if let Ok(container) = self.store.get_container_internal(&self.path) {
-            container.tree_print(self.path.object_key().as_str(), "", true);
+        if let Ok(object) = self.store.get_object_internal(self.path.object_key()) {
+            object.tree_print(self.path.object_key().as_str(), "", true);
         }
     }
 }

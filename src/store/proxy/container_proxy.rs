@@ -45,7 +45,6 @@ impl ProxyStoreTrait for ContainerProxy {
         match &self.definition {
             ContainerDefinition::Struct(_struct) => _struct.description(),
             ContainerDefinition::Map(map) => map.description(),
-            ContainerDefinition::Object(object) => object.description(),
         }
     }
 

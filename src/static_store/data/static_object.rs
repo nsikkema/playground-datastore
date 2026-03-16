@@ -3,7 +3,7 @@ use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticProperty;
 use crate::store::TreePrint;
-use crate::store::data::{Container, ContainerDefinition};
+use crate::store::data::{Object};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -77,19 +77,16 @@ impl StaticObject {
     }
 }
 
-impl From<&Container> for StaticObject {
-    fn from(container: &Container) -> Self {
+impl From<&Object> for StaticObject {
+    fn from(object: &Object) -> Self {
         let mut items = BTreeMap::new();
-        for key in container.keys() {
-            if let Ok(item) = container.get_item(&key) {
+        for key in object.keys() {
+            if let Ok(item) = object.get_item(&key) {
                 let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
                 items.insert(store_key, StaticProperty::from(item));
             }
         }
-        let description = match container.definition() {
-            ContainerDefinition::Object(def) => def.description(),
-            _ => panic!("Expected ObjectDefinition"),
-        };
+        let description = object.definition().description();
         Self::new(description, items)
     }
 }
