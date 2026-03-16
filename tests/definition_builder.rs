@@ -45,14 +45,14 @@ fn test_object_inheritance() {
 
     let child_def = builder.finish();
     assert_eq!(child_def.count(), 2);
-    assert!(child_def.contains_key("prop1"));
-    assert!(child_def.contains_key("prop2"));
+    assert!(child_def.contains_key(store_key!("prop1")));
+    assert!(child_def.contains_key(store_key!("prop2")));
 
     let mut builder = child_def.new_inherit("Grandchild");
-    builder.remove("prop1");
+    builder.remove(store_key!("prop1"));
     let grandchild_def = builder.finish();
     assert_eq!(grandchild_def.count(), 1);
-    assert!(!grandchild_def.contains_key("prop1"));
+    assert!(!grandchild_def.contains_key(store_key!("prop1")));
 }
 
 #[test]
@@ -79,7 +79,7 @@ fn test_object_definition_immutability() {
     // The point of this test is that obj_def does NOT have .add() or .remove()
     // It is immutable by design.
     assert_eq!(obj_def.count(), 1);
-    assert!(obj_def.contains_key("prop1"));
+    assert!(obj_def.contains_key(store_key!("prop1")));
 }
 
 #[test]
@@ -100,8 +100,11 @@ fn test_object_definition_builder_insert() {
     let def = builder.finish();
 
     assert_eq!(def.count(), 1);
-    assert!(def.contains_key("key1"));
-    assert_eq!(def.get("key1").unwrap().description().as_str(), "Prop");
+    assert!(def.contains_key(store_key!("key1")));
+    assert_eq!(
+        def.get(store_key!("key1")).unwrap().description().as_str(),
+        "Prop"
+    );
 }
 
 #[test]
@@ -114,7 +117,7 @@ fn test_object_definition_builder_with_inserted() {
         .finish();
 
     assert_eq!(def.count(), 1);
-    assert!(def.contains_key("key1"));
+    assert!(def.contains_key(store_key!("key1")));
 }
 
 #[test]
@@ -131,11 +134,11 @@ fn test_object_definition_builder_remove() {
         StoreKey::new("key1".into()).unwrap(),
         PropertyDefinition::new("Prop", BasicDefinition::new_string("Desc")),
     );
-    builder.remove("key1");
+    builder.remove(store_key!("key1"));
     let def = builder.finish();
 
     assert_eq!(def.count(), 0);
-    assert!(!def.contains_key("key1"));
+    assert!(!def.contains_key(store_key!("key1")));
 }
 
 #[test]
@@ -145,7 +148,7 @@ fn test_object_definition_builder_without() {
             StoreKey::new("key1".into()).unwrap(),
             PropertyDefinition::new("Prop", BasicDefinition::new_string("Desc")),
         )
-        .without("key1")
+        .without(store_key!("key1"))
         .finish();
 
     assert_eq!(def.count(), 0);
@@ -169,8 +172,8 @@ fn test_object_definition_inherit() {
         .finish();
 
     assert_eq!(child_def.count(), 2);
-    assert!(child_def.contains_key("p1"));
-    assert!(child_def.contains_key("c1"));
+    assert!(child_def.contains_key(store_key!("p1")));
+    assert!(child_def.contains_key(store_key!("c1")));
 }
 
 #[test]
@@ -192,7 +195,11 @@ fn test_object_definition_inherit_overwrite() {
 
     assert_eq!(child_def.count(), 1);
     assert_eq!(
-        child_def.get("p1").unwrap().description().as_str(),
+        child_def
+            .get(store_key!("p1"))
+            .unwrap()
+            .description()
+            .as_str(),
         "ParentProp"
     );
 }
@@ -296,11 +303,11 @@ fn test_object_definition_getters() {
     assert_eq!(def.description().as_str(), "Test");
     assert_eq!(def.description_ref().as_str(), "Test");
     assert_eq!(def.count(), 1);
-    assert!(def.contains_key("p1"));
+    assert!(def.contains_key(store_key!("p1")));
     assert!(def.contains_key_str("p1"));
-    assert!(def.get("p1").is_some());
+    assert!(def.get(store_key!("p1")).is_some());
     assert!(def.get_str("p1").is_some());
-    assert!(def.get("p2").is_none());
+    assert!(def.get(store_key!("p2")).is_none());
 
     let keys: Vec<_> = def.keys().collect();
     assert_eq!(keys.len(), 1);
@@ -323,5 +330,5 @@ fn test_object_definition_launder() {
 
     let laundered = def.launder(&store);
     assert_eq!(laundered.description().as_str(), "Test");
-    assert!(laundered.contains_key("p1"));
+    assert!(laundered.contains_key(store_key!("p1")));
 }

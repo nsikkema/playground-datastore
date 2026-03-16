@@ -3,7 +3,7 @@ use datastore::definition::{
     TableDefinition,
 };
 use datastore::store::{ProxyStoreTrait, Store};
-use datastore::{path, store_key};
+use datastore::store_key;
 
 fn main() {
     // 1. Initialize the shared string store and the main store.
@@ -66,29 +66,29 @@ fn main() {
         .expect("Failed to create object");
 
     // 4. Populate the data.
-    let mut object_proxy = store.object(&path!("example_item")).unwrap();
+    let mut object_proxy = store.object("example_item").unwrap();
 
     // Set Basic property
-    let mut basic = object_proxy.basic("basic_prop").unwrap();
+    let mut basic = object_proxy.basic(store_key!("basic_prop")).unwrap();
     basic.set_value("Hello, Static Store!");
     basic.push().unwrap();
 
     // Set Table property
-    let mut table = object_proxy.table("table_prop").unwrap();
+    let mut table = object_proxy.table(store_key!("table_prop")).unwrap();
     table.append_row();
     table.set_cell(0, "col_1", "Row 0, Col 1").unwrap();
     table.set_cell(0, "col_2", "42").unwrap();
     table.push().unwrap();
 
     // Set Struct property
-    let struct_container = object_proxy.container("struct_prop").unwrap();
+    let struct_container = object_proxy.container(store_key!("struct_prop")).unwrap();
     let mut s_field_1 = store
         .basic(
             &struct_container
                 .path()
                 .clone()
                 .to_builder()
-                .struct_item("field_1")
+                .struct_item(store_key!("field_1"))
                 .build()
                 .unwrap(),
         )
@@ -102,7 +102,7 @@ fn main() {
                 .path()
                 .clone()
                 .to_builder()
-                .struct_item("field_2")
+                .struct_item(store_key!("field_2"))
                 .build()
                 .unwrap(),
         )
@@ -111,8 +111,10 @@ fn main() {
     s_field_2.push().unwrap();
 
     // Set Map property
-    let map_container = object_proxy.container("map_prop").unwrap();
-    let entry_proxy = map_container.insert_map_entry("entry_1").unwrap();
+    let map_container = object_proxy.container(store_key!("map_prop")).unwrap();
+    let entry_proxy = map_container
+        .insert_map_entry(store_key!("entry_1"))
+        .unwrap();
 
     let mut m_field_1 = store
         .basic(
@@ -120,7 +122,7 @@ fn main() {
                 .path()
                 .clone()
                 .to_builder()
-                .struct_item("field_1")
+                .struct_item(store_key!("field_1"))
                 .build()
                 .unwrap(),
         )
@@ -134,7 +136,7 @@ fn main() {
                 .path()
                 .clone()
                 .to_builder()
-                .struct_item("field_2")
+                .struct_item(store_key!("field_2"))
                 .build()
                 .unwrap(),
         )
@@ -144,7 +146,7 @@ fn main() {
 
     // 5. Convert the store to a StaticStore.
     // A StaticStore is a read-only, serializable snapshot of the store.
-    let static_store = store.to_static();
+    let static_store = store.to_static().expect("Failed to create static store");
 
     // 6. Demonstrate StaticStore functionality.
     println!("--- Static Store Tree View ---");
@@ -154,7 +156,7 @@ fn main() {
     if let Some(obj) = static_store.get("example_item") {
         if let Some(prop) = obj.get("basic_prop") {
             if let Some(basic) = prop.get_basic() {
-                println!("\nDirect access to basic_prop: {}", basic.value());
+                println!("\nDirect access to basic_prop: {}", basic.value().as_str());
             }
         }
     }

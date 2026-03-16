@@ -1,3 +1,4 @@
+use crate::StoreError;
 use crate::definition::PropertyDefinition;
 use crate::static_store::data::{StaticBasic, StaticMap, StaticStruct, StaticTable};
 use crate::store::TreePrint;
@@ -12,15 +13,16 @@ pub enum StaticProperty {
     Map(StaticMap),
 }
 
-impl From<ContainerItem> for StaticProperty {
-    fn from(item: ContainerItem) -> Self {
+impl TryFrom<ContainerItem> for StaticProperty {
+    type Error = StoreError;
+
+    fn try_from(item: ContainerItem) -> Result<Self, Self::Error> {
         match item {
-            ContainerItem::Basic(b) => Self::Basic(StaticBasic::from(&b)),
-            ContainerItem::Table(t) => Self::Table(StaticTable::from(&t)),
+            ContainerItem::Basic(b) => Ok(Self::Basic(StaticBasic::from(&b))),
+            ContainerItem::Table(t) => Ok(Self::Table(StaticTable::from(&t))),
             ContainerItem::Container(c) => match c.definition() {
-                ContainerDefinition::Struct(_) => Self::Struct(StaticStruct::from(&c)),
-                ContainerDefinition::Map(_) => Self::Map(StaticMap::from(&c)),
-                _ => panic!("Unsupported container type for StaticProperty conversion"),
+                ContainerDefinition::Struct(_) => Ok(Self::Struct(StaticStruct::try_from(&c)?)),
+                ContainerDefinition::Map(_) => Ok(Self::Map(StaticMap::try_from(&c)?)),
             },
         }
     }

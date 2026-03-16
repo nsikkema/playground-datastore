@@ -1,12 +1,8 @@
-use crate::StoreError;
-use crate::definition::{
-    MapDefinition, ObjectDefinition, PropertyDefinitionType, StructDefinition, StructItemDefinition,
-};
-use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::static_store::data::{
-    StaticMap, StaticObject, StaticProperty, StaticStruct, StaticStructItem,
-};
+use crate::definition::{MapDefinition, StructDefinition, StructItemDefinition};
+use crate::shareable_string::SharedStringStore;
+use crate::static_store::data::{StaticMap, StaticProperty, StaticStruct, StaticStructItem};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
+use crate::{StoreError, StoreKey};
 use std::collections::HashMap;
 
 /// An item stored within a `Container`.
@@ -27,14 +23,6 @@ pub enum ContainerDefinition {
     Struct(StructDefinition),
     /// A map definition.
     Map(MapDefinition),
-    /// An object definition.
-    Object(ObjectDefinition),
-}
-
-impl Default for ContainerDefinition {
-    fn default() -> Self {
-        Self::Object(ObjectDefinition::default())
-    }
 }
 
 /// A container that holds multiple `ContainerItem`s.
@@ -42,49 +30,12 @@ impl Default for ContainerDefinition {
 #[derive(Debug, Clone)]
 pub(crate) struct Container {
     definition: ContainerDefinition,
-    items: HashMap<ShareableString, ContainerItem>,
+    items: HashMap<StoreKey, ContainerItem>,
     blake3_hash: StoreHashContainer,
     locked: bool,
 }
 
 impl Container {
-    /// Creates a new `Container` representing an object.
-    pub(crate) fn new_object(definition: &ObjectDefinition) -> Self {
-        let mut items = HashMap::new();
-        for (key, item_definition) in definition.iter() {
-            match item_definition.item_type() {
-                PropertyDefinitionType::Basic(basic) => {
-                    items.insert(key.clone(), ContainerItem::Basic(Basic::new(basic.clone())));
-                }
-                PropertyDefinitionType::Struct(_struct) => {
-                    items.insert(
-                        key.clone(),
-                        ContainerItem::Container(Self::new_struct(_struct.clone())),
-                    );
-                }
-                PropertyDefinitionType::Table(table) => {
-                    items.insert(key.clone(), ContainerItem::Table(Table::new(table.clone())));
-                }
-                PropertyDefinitionType::Map(map) => {
-                    items.insert(
-                        key.clone(),
-                        ContainerItem::Container(Self::new_map(map.clone())),
-                    );
-                }
-            }
-        }
-        let mut container = Container {
-            definition: ContainerDefinition::Object(definition.clone()),
-            items,
-            blake3_hash: StoreHashContainer::default(),
-            locked: true,
-        };
-
-        container.update_blake3_hash();
-
-        container
-    }
-
     /// Returns a new `Container` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
         let mut items = HashMap::new();
@@ -94,13 +45,12 @@ impl Container {
                 ContainerItem::Table(t) => ContainerItem::Table(t.launder(store)),
                 ContainerItem::Container(c) => ContainerItem::Container(c.launder(store)),
             };
-            items.insert(store.launder(key), laundered_item);
+            items.insert(key.launder(store), laundered_item);
         }
 
         let laundered_definition = match &self.definition {
             ContainerDefinition::Struct(s) => ContainerDefinition::Struct(s.launder(store)),
             ContainerDefinition::Map(m) => ContainerDefinition::Map(m.launder(store)),
-            ContainerDefinition::Object(o) => ContainerDefinition::Object(o.launder(store)),
         };
 
         let mut laundered = Self {
@@ -152,7 +102,7 @@ impl Container {
     }
 
     /// Returns the keys of all items in the container.
-    pub(crate) fn keys(&self) -> Vec<ShareableString> {
+    pub(crate) fn keys(&self) -> Vec<StoreKey> {
         self.items.keys().cloned().collect()
     }
 
@@ -167,9 +117,9 @@ impl Container {
     }
 
     /// Returns the item associated with the given key.
-    pub(crate) fn get_item(&self, key: &ShareableString) -> Result<ContainerItem, StoreError> {
+    pub(crate) fn get_item<K: AsRef<str>>(&self, key: K) -> Result<ContainerItem, StoreError> {
         self.items
-            .get(key)
+            .get(key.as_ref())
             .cloned()
             .ok_or(StoreError::PropertyNotFound)
     }
@@ -177,7 +127,7 @@ impl Container {
     /// Sets the item for the given key and updates the hash.
     pub(crate) fn set_item(
         &mut self,
-        key: &ShareableString,
+        key: &StoreKey,
         item: ContainerItem,
     ) -> Result<(), StoreError> {
         if self.locked && !self.items.contains_key(key) {
@@ -200,28 +150,9 @@ impl Container {
         }
     }
 
-    pub(crate) fn update_from_static(
-        &mut self,
-        items: &std::collections::BTreeMap<ShareableString, StaticProperty>,
-    ) {
-        for (key, static_property) in items {
-            if let Some(item) = self.items.get_mut(key)
-                && item.matches_static(static_property)
-            {
-                item.update_from_static(static_property);
-                continue;
-            }
-
-            // If doesn't exist or type mismatch, replace it.
-            self.items
-                .insert(key.clone(), ContainerItem::from(static_property));
-        }
-        self.update_blake3_hash();
-    }
-
     pub(crate) fn update_from_static_struct(
         &mut self,
-        items: &std::collections::BTreeMap<ShareableString, StaticStructItem>,
+        items: &std::collections::BTreeMap<StoreKey, StaticStructItem>,
     ) {
         for (key, static_item) in items {
             if let Some(item) = self.items.get_mut(key) {
@@ -247,7 +178,7 @@ impl Container {
 
     pub(crate) fn update_from_static_map(
         &mut self,
-        items: &std::collections::BTreeMap<ShareableString, StaticStruct>,
+        items: &std::collections::BTreeMap<StoreKey, StaticStruct>,
     ) {
         for (key, static_struct) in items {
             if let Some(ContainerItem::Container(c)) = self.items.get_mut(key) {
@@ -258,24 +189,6 @@ impl Container {
             }
         }
         self.update_blake3_hash();
-    }
-}
-
-impl From<&StaticObject> for Container {
-    fn from(static_object: &StaticObject) -> Self {
-        let items = static_object
-            .items()
-            .iter()
-            .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
-            .collect();
-        let c = Self {
-            definition: ContainerDefinition::Object(static_object.definition().clone()),
-            items,
-            blake3_hash: StoreHashContainer::new(),
-            locked: true,
-        };
-        c.blake3_hash.set(static_object.hash());
-        c
     }
 }
 
@@ -360,23 +273,57 @@ impl ContainerItem {
         }
     }
 
-    pub(crate) fn update_from_static(&mut self, static_property: &StaticProperty) {
+    pub(crate) fn update_from_static(
+        &mut self,
+        static_property: &StaticProperty,
+    ) -> Result<(), StoreError> {
         match (self, static_property) {
             (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
                 b.update_from_static(sb);
+                Ok(())
             }
             (ContainerItem::Table(t), StaticProperty::Table(st)) => {
                 t.update_from_static(st);
+                Ok(())
             }
             (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
                 c.update_from_static_struct(ss.items());
+                Ok(())
             }
             (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
                 c.update_from_static_map(sm.items());
+                Ok(())
             }
-            _ => panic!(
+            _ => Err(StoreError::SchemaMismatch(
                 "Type mismatch in update_from_static - should have been checked by matches_static"
-            ),
+                    .into(),
+            )),
+        }
+    }
+}
+
+impl CommonStoreTraitInternal for ContainerItem {
+    fn current_blake3_hash(&self) -> [u8; 32] {
+        match self {
+            ContainerItem::Basic(item) => item.current_blake3_hash(),
+            ContainerItem::Table(item) => item.current_blake3_hash(),
+            ContainerItem::Container(item) => item.current_blake3_hash(),
+        }
+    }
+
+    fn update_blake3_hash(&mut self) {
+        match self {
+            ContainerItem::Basic(item) => item.update_blake3_hash(),
+            ContainerItem::Table(item) => item.update_blake3_hash(),
+            ContainerItem::Container(item) => item.update_blake3_hash(),
+        }
+    }
+
+    fn clear_hash(&mut self) {
+        match self {
+            ContainerItem::Basic(item) => item.clear_hash(),
+            ContainerItem::Table(item) => item.clear_hash(),
+            ContainerItem::Container(item) => item.clear_hash(),
         }
     }
 }
@@ -398,25 +345,19 @@ impl CommonStoreTraitInternal for Container {
             ContainerDefinition::Map(_) => {
                 h.update(b"Map");
             }
-            ContainerDefinition::Object(_) => {
-                h.update(b"Object");
-            }
         }
 
         h.update(&(self.items.len() as u64).to_le_bytes());
 
         // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
+        let mut keys: Vec<&StoreKey> = self.items.keys().collect();
+        keys.sort_by(|a, b| a.as_str().cmp(b.as_str()));
 
         for key in keys {
-            let value = self.items.get(key).unwrap();
             h.update(&key.current_blake3_hash());
-            match value {
-                ContainerItem::Basic(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Table(item) => h.update(&item.current_blake3_hash()),
-                ContainerItem::Container(item) => h.update(&item.current_blake3_hash()),
-            };
+            if let Some(value) = self.items.get(key) {
+                h.update(&value.current_blake3_hash());
+            }
         }
 
         let digest = h.finalize();
@@ -443,12 +384,10 @@ impl TreePrint for Container {
         let type_str = match &self.definition {
             ContainerDefinition::Struct(_) => "Struct",
             ContainerDefinition::Map(_) => "Map",
-            ContainerDefinition::Object(_) => "Object",
         };
         let description = match &self.definition {
             ContainerDefinition::Struct(s) => s.description(),
             ContainerDefinition::Map(m) => m.description(),
-            ContainerDefinition::Object(o) => o.description(),
         };
 
         println!(

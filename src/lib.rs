@@ -35,7 +35,7 @@
 //! store.create_object(store_key!("user_1"), &def).unwrap();
 //!
 //! // 3. Access data via a proxy
-//! let mut user_proxy = store.object(&"user_1".into()).unwrap();
+//! let mut user_proxy = store.object("user_1").unwrap();
 //! let mut name_proxy = user_proxy.basic("name").unwrap();
 //!
 //! name_proxy.set_value("Alice");
@@ -92,6 +92,12 @@ pub enum StoreError {
     SerializationError(String),
     /// A property conflict occurred during inheritance.
     PropertyConflict(ShareableString),
+    /// A schema mismatch occurred during update or conversion.
+    SchemaMismatch(String),
+    /// Nested containers are not supported in this context.
+    NestedContainerNotSupported,
+    /// The schema is missing.
+    MissingSchema(String),
 }
 
 impl Display for StoreError {
@@ -115,6 +121,11 @@ impl Display for StoreError {
             StoreError::RedoNotAvailable => write!(f, "Redo not available"),
             StoreError::SerializationError(s) => write!(f, "Serialization error: {}", s),
             StoreError::PropertyConflict(s) => write!(f, "Property conflict: {}", s),
+            StoreError::SchemaMismatch(s) => write!(f, "Schema mismatch: {}", s),
+            StoreError::NestedContainerNotSupported => {
+                write!(f, "Nested containers are not supported in this context")
+            }
+            StoreError::MissingSchema(s) => write!(f, "Missing schema: {}", s),
         }
     }
 }

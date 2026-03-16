@@ -37,8 +37,7 @@ impl BasicProxy {
 
     /// Sets a new value in the proxy.
     pub fn set_value<S: Into<ShareableString>>(&mut self, value: S) {
-        let new_value = self.store.launder(value.into());
-        self.data.set(new_value);
+        self.data.set(value.into());
     }
 
     /// Prints the basic property as a tree for debugging.
@@ -98,7 +97,7 @@ impl ProxyStoreTrait for BasicProxy {
     }
 
     fn object(&self) -> Result<ObjectProxy, StoreError> {
-        let path = self.path.clone().get_object();
-        self.store.object(&path)
+        let key = self.path.object_key();
+        self.store.object(key)
     }
 }

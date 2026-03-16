@@ -1,3 +1,4 @@
+use crate::StoreError;
 use crate::StoreKey;
 use crate::definition::{StructDefinition, StructItemDefinition};
 use crate::shareable_string::ShareableString;
@@ -59,7 +60,7 @@ impl TreePrint for StaticStructItem {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStruct {
     definition: StructDefinition,
-    items: BTreeMap<ShareableString, StaticStructItem>,
+    items: BTreeMap<StoreKey, StaticStructItem>,
     hash: [u8; 32],
 }
 
@@ -67,20 +68,19 @@ impl StaticStruct {
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticStructItem>,
-    ) -> Self {
+    ) -> Result<Self, StoreError> {
         let items_vec: Vec<(StoreKey, StructItemDefinition)> = items
             .iter()
             .map(|(k, v)| (k.clone(), v.definition()))
             .collect();
         let definition = StructDefinition::new(description, items_vec);
-        let items = items.into_iter().map(|(k, v)| (k.key, v)).collect();
         let mut s = Self {
             definition,
             items,
             hash: [0u8; 32],
         };
         s.update_hash();
-        s
+        Ok(s)
     }
 
     fn update_hash(&mut self) {
@@ -91,14 +91,9 @@ impl StaticStruct {
 
         h.update(&(self.items.len() as u64).to_le_bytes());
 
-        // Sort keys for deterministic hashing
-        let mut keys: Vec<&ShareableString> = self.items.keys().collect();
-        keys.sort_by(|a, b| a.as_ref().cmp(b.as_ref()));
-
-        for key in keys {
-            let value = self.items.get(key).unwrap();
+        for (key, item) in &self.items {
             h.update(&key.current_blake3_hash());
-            h.update(&value.hash());
+            h.update(&item.hash());
         }
 
         let digest = h.finalize();
@@ -109,15 +104,15 @@ impl StaticStruct {
         self.hash
     }
 
-    pub(crate) fn items(&self) -> &BTreeMap<ShareableString, StaticStructItem> {
+    pub(crate) fn items(&self) -> &BTreeMap<StoreKey, StaticStructItem> {
         &self.items
     }
 
-    pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticStructItem> {
-        self.items.get(key.as_ref())
+    pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticStructItem> {
+        self.items.get(&key.into())
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = (&ShareableString, &StaticStructItem)> {
+    pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticStructItem)> {
         self.items.iter()
     }
 
@@ -126,42 +121,53 @@ impl StaticStruct {
     }
 }
 
-impl From<ContainerItem> for StaticStructItem {
-    fn from(item: ContainerItem) -> Self {
+impl TryFrom<ContainerItem> for StaticStructItem {
+    type Error = StoreError;
+
+    fn try_from(item: ContainerItem) -> Result<Self, Self::Error> {
         match item {
-            ContainerItem::Basic(basic) => StaticStructItem::Basic(StaticBasic::from(&basic)),
-            ContainerItem::Table(table) => StaticStructItem::Table(StaticTable::from(&table)),
-            ContainerItem::Container(_) => {
-                panic!("Nested containers not supported in StaticStructItem")
-            }
+            ContainerItem::Basic(basic) => Ok(StaticStructItem::Basic(StaticBasic::from(&basic))),
+            ContainerItem::Table(table) => Ok(StaticStructItem::Table(StaticTable::from(&table))),
+            ContainerItem::Container(_) => Err(StoreError::NestedContainerNotSupported),
         }
     }
 }
 
-impl From<ContainerItem> for StaticStruct {
-    fn from(item: ContainerItem) -> Self {
+impl TryFrom<ContainerItem> for StaticStruct {
+    type Error = StoreError;
+
+    fn try_from(item: ContainerItem) -> Result<Self, Self::Error> {
         match item {
             ContainerItem::Container(c) => match c.definition() {
-                ContainerDefinition::Struct(_) => StaticStruct::from(&c),
-                _ => panic!("Expected Struct container"),
+                ContainerDefinition::Struct(_) => StaticStruct::try_from(&c),
+                _ => Err(StoreError::SchemaMismatch(
+                    "Expected Struct container".into(),
+                )),
             },
-            _ => panic!("Expected ContainerItem::Container for StaticStruct conversion"),
+            _ => Err(StoreError::SchemaMismatch(
+                "Expected ContainerItem::Container for StaticStruct conversion".into(),
+            )),
         }
     }
 }
 
-impl From<&Container> for StaticStruct {
-    fn from(container: &Container) -> Self {
+impl TryFrom<&Container> for StaticStruct {
+    type Error = StoreError;
+
+    fn try_from(container: &Container) -> Result<Self, Self::Error> {
         let mut items = BTreeMap::new();
         for key in container.keys() {
             if let Ok(item) = container.get_item(&key) {
-                let store_key = StoreKey::new(key.clone()).expect("Valid key from container");
-                items.insert(store_key, StaticStructItem::from(item));
+                items.insert(key.clone(), StaticStructItem::try_from(item)?);
             }
         }
         let description = match container.definition() {
             ContainerDefinition::Struct(def) => def.description(),
-            _ => panic!("Expected StructDefinition"),
+            _ => {
+                return Err(StoreError::SchemaMismatch(
+                    "Expected StructDefinition".into(),
+                ));
+            }
         };
         Self::new(description, items)
     }
@@ -179,10 +185,10 @@ impl TreePrint for StaticStruct {
             &self.definition.description()
         );
         let next_prefix = Self::next_prefix(prefix, last);
-        let keys: Vec<_> = self.items.keys().collect();
-        for (i, key) in keys.iter().enumerate() {
-            let is_last = i == keys.len() - 1;
-            self.items[*key].tree_print(key.as_str(), &next_prefix, is_last);
+        let entries: Vec<_> = self.items.iter().collect();
+        for (i, (key, item)) in entries.iter().enumerate() {
+            let is_last = i == entries.len() - 1;
+            item.tree_print(key.as_str(), &next_prefix, is_last);
         }
     }
 }

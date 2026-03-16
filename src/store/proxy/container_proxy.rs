@@ -3,14 +3,14 @@ use crate::store::{
     Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
     TreePrint,
 };
-use crate::{StoreError, StorePath};
+use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a container in the store.
 pub struct ContainerProxy {
     path: StorePath,
     store: Store,
     definition: ContainerDefinition,
-    keys: Vec<ShareableString>,
+    keys: Vec<StoreKey>,
     object_hash: StoreHashContainer,
     last_sync_hash: [u8; 32],
 }
@@ -21,7 +21,7 @@ impl ContainerProxy {
         path: StorePath,
         store: Store,
         definition: ContainerDefinition,
-        keys: Vec<ShareableString>,
+        keys: Vec<StoreKey>,
         object_hash: StoreHashContainer,
         last_sync_hash: [u8; 32],
     ) -> Self {
@@ -45,7 +45,6 @@ impl ProxyStoreTrait for ContainerProxy {
         match &self.definition {
             ContainerDefinition::Struct(_struct) => _struct.description(),
             ContainerDefinition::Map(map) => map.description(),
-            ContainerDefinition::Object(object) => object.description(),
         }
     }
 
@@ -82,14 +81,14 @@ impl ProxyStoreTrait for ContainerProxy {
     }
 
     fn object(&self) -> Result<ObjectProxy, StoreError> {
-        let path = self.path.clone().get_object();
-        self.store.object(&path)
+        let key = self.path.object_key();
+        self.store.object(key)
     }
 }
 
 impl ContainerProxy {
     /// Inserts a new entry into a map container and returns a proxy to it.
-    pub fn insert_map_entry<S: Into<ShareableString>>(
+    pub fn insert_map_entry<S: Into<StoreKey>>(
         &self,
         key: S,
     ) -> Result<ContainerProxy, StoreError> {

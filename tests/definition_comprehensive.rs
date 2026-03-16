@@ -78,10 +78,7 @@ fn test_struct_definition_comprehensive() {
     assert!(struct_def.contains_key_str("f1"));
     assert!(struct_def.get_str("f2").is_some());
 
-    let keys: Vec<String> = struct_def
-        .keys()
-        .map(|k: &datastore::shareable_string::ShareableString| k.as_ref().to_string())
-        .collect();
+    let keys: Vec<String> = struct_def.keys().map(|k| k.as_str().to_string()).collect();
     assert!(keys.contains(&"f1".to_string()));
     assert!(keys.contains(&"f2".to_string()));
 
