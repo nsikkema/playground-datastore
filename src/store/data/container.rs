@@ -31,12 +31,6 @@ pub enum ContainerDefinition {
     Object(ObjectDefinition),
 }
 
-impl Default for ContainerDefinition {
-    fn default() -> Self {
-        Self::Object(ObjectDefinition::default())
-    }
-}
-
 /// A container that holds multiple `ContainerItem`s.
 /// It can represent a struct, a map, or a top-level object.
 #[derive(Debug, Clone)]
