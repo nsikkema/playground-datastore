@@ -66,7 +66,7 @@ impl Hash for ShareableString {
 
 impl PartialEq for ShareableString {
     fn eq(&self, other: &Self) -> bool {
-        self.blake3_hash == other.blake3_hash && *self.data == *other.data
+        self.ptr_eq(other) || (self.blake3_hash == other.blake3_hash && *self.data == *other.data)
     }
 }
 
