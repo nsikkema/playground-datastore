@@ -51,7 +51,7 @@ impl StoreInternal {
 
         for key in keys {
             h.update(&key.current_blake3_hash());
-            h.update(&objects.get(key).unwrap().current_blake3_hash());
+            h.update(&objects.get(key).unwrap().current_shared_hash());
         }
 
         let digest = h.finalize();
@@ -164,7 +164,7 @@ impl Store {
 
         let keys = object.keys();
         let object_hash = object.hash_container().clone();
-        let last_sync_hash = object.current_blake3_hash();
+        let last_sync_hash = object.current_shared_hash();
 
         let store_path = StorePath::builder(StoreKey::new_unsafe(key)).build();
 
@@ -238,7 +238,7 @@ impl Store {
         let container = self.get_container_internal(store_path)?;
         let keys = container.keys();
         let object_hash = container.hash_container().clone();
-        let last_sync_hash = container.current_blake3_hash();
+        let last_sync_hash = container.current_shared_hash();
 
         Ok(ContainerProxy::new(
             store_path.clone(),
@@ -320,7 +320,7 @@ impl Store {
         path: &StorePath,
         mut container: Container,
     ) -> Result<(), StoreError> {
-        container.update_blake3_hash();
+        container.update_shared_hash();
         let segments = path.segments();
 
         if segments.is_empty() {

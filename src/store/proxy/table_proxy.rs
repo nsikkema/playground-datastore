@@ -10,19 +10,12 @@ pub struct TableProxy {
     path: StorePath,
     store: Store,
     data: Table,
-    last_sync_hash: [u8; 32],
 }
 
 impl TableProxy {
     /// Creates a new `TableProxy`.
     pub(crate) fn new(path: StorePath, store: Store, data: Table) -> Self {
-        let last_sync_hash = data.current_blake3_hash();
-        Self {
-            path,
-            store,
-            data,
-            last_sync_hash,
-        }
+        Self { path, store, data }
     }
 
     /// Returns a reference to the table definition.
@@ -96,16 +89,25 @@ impl ProxyStoreTrait for TableProxy {
     }
 
     fn is_valid(&self) -> bool {
-        self.data.current_blake3_hash() != [0u8; 32]
+        self.data.is_valid()
     }
 
     fn has_changed(&self) -> bool {
-        self.last_sync_hash != self.data.current_blake3_hash()
+        self.data.has_changed()
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.table(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition() == self.definition() {
+                self.data = proxy.data;
+                return Ok(());
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
         if !self.has_changed() {
@@ -115,18 +117,25 @@ impl ProxyStoreTrait for TableProxy {
         let proxy = self.store.table(&self.path)?;
 
         self.data = proxy.data;
-        self.last_sync_hash = proxy.last_sync_hash;
 
         Ok(())
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.table(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition() == self.definition() {
+                self.data = proxy.data;
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
         self.store.set_table(&self.path, &self.data)?;
-        self.last_sync_hash = self.data.current_blake3_hash();
+        self.data.update_shared_hash(); // Sync shared hash after successful push
         Ok(())
     }
 

@@ -92,7 +92,7 @@ impl From<&Table> for StaticTable {
         Self {
             definition: table.definition().clone(),
             rows,
-            hash: table.current_blake3_hash(),
+            hash: table.current_shared_hash(),
         }
     }
 }

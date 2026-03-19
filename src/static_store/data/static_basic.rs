@@ -54,7 +54,7 @@ impl From<&Basic> for StaticBasic {
         Self {
             definition: basic.definition().clone(),
             value: basic.get(),
-            hash: basic.current_blake3_hash(),
+            hash: basic.current_shared_hash(),
         }
     }
 }

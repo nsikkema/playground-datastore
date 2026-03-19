@@ -5,12 +5,18 @@ use std::fmt;
 
 /// Internal trait for common store operations related to hashing.
 pub(crate) trait CommonStoreTraitInternal {
-    /// Returns the current BLAKE3 hash.
-    fn current_blake3_hash(&self) -> [u8; 32];
-    /// Updates the BLAKE3 hash.
-    fn update_blake3_hash(&mut self);
-    /// Clears the current hash.
-    fn clear_hash(&mut self);
+    /// Returns the current shared BLAKE3 hash.
+    fn current_shared_hash(&self) -> [u8; 32];
+    /// Returns a new BLAKE3 Hash for the object.
+    fn update_current_hash(&mut self);
+    /// Force sync shared hash.
+    fn update_shared_hash(&mut self);
+    /// Clears the current shared hash.
+    fn clear_shared_hash(&mut self);
+    /// Check if de-synced from the original store.
+    fn has_changed(&self) -> bool;
+    /// Check if the original store still exists.
+    fn is_valid(&self) -> bool;
 }
 
 /// Trait for proxy objects that provide access to store data.

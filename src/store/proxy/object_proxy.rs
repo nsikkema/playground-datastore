@@ -125,7 +125,18 @@ impl ProxyStoreTrait for ObjectProxy {
 
     fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.object(self.path.object_key()) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition == self.definition {
+                self.keys = proxy.keys;
+                self.object_hash = proxy.object_hash;
+                self.last_sync_hash = proxy.last_sync_hash;
+                return Ok(());
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
         if !self.has_changed() {
@@ -141,6 +152,20 @@ impl ProxyStoreTrait for ObjectProxy {
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
+        if !self.is_valid() {
+            let proxy = match self.store.object(self.path.object_key()) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition == self.definition {
+                self.keys = proxy.keys;
+                self.object_hash = proxy.object_hash;
+                self.last_sync_hash = proxy.last_sync_hash;
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
+        }
+        self.last_sync_hash = self.object_hash.get(); // Sync hash after push
         Ok(())
     }
 

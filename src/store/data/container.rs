@@ -91,28 +91,44 @@ impl From<&StaticProperty> for ContainerItem {
 }
 
 impl CommonStoreTraitInternal for ContainerItem {
-    fn current_blake3_hash(&self) -> [u8; 32] {
+    fn current_shared_hash(&self) -> [u8; 32] {
         match self {
-            ContainerItem::Basic(item) => item.current_blake3_hash(),
-            ContainerItem::Table(item) => item.current_blake3_hash(),
-            ContainerItem::Container(item) => item.current_blake3_hash(),
+            ContainerItem::Basic(item) => item.current_shared_hash(),
+            ContainerItem::Table(item) => item.current_shared_hash(),
+            ContainerItem::Container(item) => item.current_shared_hash(),
         }
     }
 
-    fn update_blake3_hash(&mut self) {
+    fn update_current_hash(&mut self) {
+        unimplemented!()
+    }
+
+    fn update_shared_hash(&mut self) {
         match self {
-            ContainerItem::Basic(item) => item.update_blake3_hash(),
-            ContainerItem::Table(item) => item.update_blake3_hash(),
-            ContainerItem::Container(item) => item.update_blake3_hash(),
+            ContainerItem::Basic(item) => item.update_shared_hash(),
+            ContainerItem::Table(item) => item.update_shared_hash(),
+            ContainerItem::Container(item) => item.update_shared_hash(),
         }
     }
 
-    fn clear_hash(&mut self) {
+    fn clear_shared_hash(&mut self) {
         match self {
-            ContainerItem::Basic(item) => item.clear_hash(),
-            ContainerItem::Table(item) => item.clear_hash(),
-            ContainerItem::Container(item) => item.clear_hash(),
+            ContainerItem::Basic(item) => item.clear_shared_hash(),
+            ContainerItem::Table(item) => item.clear_shared_hash(),
+            ContainerItem::Container(item) => item.clear_shared_hash(),
         }
+    }
+
+    fn has_changed(&self) -> bool {
+        match self {
+            ContainerItem::Basic(item) => item.has_changed(),
+            ContainerItem::Table(item) => item.has_changed(),
+            ContainerItem::Container(item) => item.has_changed(),
+        }
+    }
+
+    fn is_valid(&self) -> bool {
+        unimplemented!()
     }
 }
 
@@ -133,7 +149,7 @@ impl TreePrint for ContainerItem {
 }
 
 /// The definition for a `Container`.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub enum ContainerDefinition {
     /// A struct definition.
     Struct(StructDefinition),
@@ -147,7 +163,7 @@ pub enum ContainerDefinition {
 pub(crate) struct Container {
     definition: ContainerDefinition,
     items: HashMap<StoreKey, ContainerItem>,
-    blake3_hash: StoreHashContainer,
+    shared_hash: StoreHashContainer,
     locked: bool,
 }
 
@@ -172,10 +188,10 @@ impl Container {
         let mut laundered = Self {
             definition: laundered_definition,
             items,
-            blake3_hash: StoreHashContainer::new(),
+            shared_hash: StoreHashContainer::new(),
             locked: self.locked,
         };
-        laundered.update_blake3_hash();
+        laundered.update_shared_hash();
         laundered
     }
 
@@ -196,11 +212,10 @@ impl Container {
         let mut container = Container {
             definition: ContainerDefinition::Struct(definition),
             items,
-            blake3_hash: StoreHashContainer::default(),
+            shared_hash: StoreHashContainer::default(),
             locked: true,
         };
-
-        container.update_blake3_hash();
+        container.update_shared_hash();
         container
     }
 
@@ -209,10 +224,10 @@ impl Container {
         let mut container = Container {
             definition: ContainerDefinition::Map(definition),
             items: HashMap::new(),
-            blake3_hash: StoreHashContainer::default(),
+            shared_hash: StoreHashContainer::default(),
             locked: false,
         };
-        container.update_blake3_hash();
+        container.update_shared_hash();
 
         container
     }
@@ -224,7 +239,7 @@ impl Container {
 
     /// Returns a reference to the hash container.
     pub(crate) fn hash_container(&self) -> &StoreHashContainer {
-        &self.blake3_hash
+        &self.shared_hash
     }
 
     /// Returns a reference to the container's definition.
@@ -250,17 +265,17 @@ impl Container {
             return Err(StoreError::PropertyNotFound);
         }
         self.items.insert(key.clone(), item);
-        self.update_blake3_hash();
+        self.update_shared_hash();
         Ok(())
     }
 
     /// Clears the hash of this container and all nested items.
     pub(crate) fn clear_hash_all(&mut self) {
-        self.clear_hash();
+        self.clear_shared_hash();
         for item in self.items.values_mut() {
             match item {
-                ContainerItem::Basic(item) => item.clear_hash(),
-                ContainerItem::Table(item) => item.clear_hash(),
+                ContainerItem::Basic(item) => item.clear_shared_hash(),
+                ContainerItem::Table(item) => item.clear_shared_hash(),
                 ContainerItem::Container(item) => item.clear_hash_all(),
             }
         }
@@ -289,7 +304,7 @@ impl Container {
                     .insert(key.clone(), ContainerItem::from(static_item));
             }
         }
-        self.update_blake3_hash();
+        self.update_shared_hash();
     }
 
     pub(crate) fn update_from_static_map(
@@ -304,7 +319,7 @@ impl Container {
                     .insert(key.clone(), ContainerItem::from(static_struct));
             }
         }
-        self.update_blake3_hash();
+        self.update_shared_hash();
     }
 }
 
@@ -315,13 +330,13 @@ impl From<&StaticStruct> for Container {
             .iter()
             .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
             .collect();
-        let c = Self {
+        let mut c = Self {
             definition: ContainerDefinition::Struct(static_struct.definition().clone()),
             items,
-            blake3_hash: StoreHashContainer::new(),
+            shared_hash: StoreHashContainer::new(),
             locked: true,
         };
-        c.blake3_hash.set(static_struct.hash());
+        c.update_shared_hash();
         c
     }
 }
@@ -333,23 +348,39 @@ impl From<&StaticMap> for Container {
             .iter()
             .map(|(k, v)| (k.clone(), ContainerItem::from(v)))
             .collect();
-        let c = Self {
+        let mut c = Self {
             definition: ContainerDefinition::Map(static_map.definition().clone()),
             items,
-            blake3_hash: StoreHashContainer::new(),
-            locked: false,
+            shared_hash: StoreHashContainer::new(),
+            locked: true,
         };
-        c.blake3_hash.set(static_map.hash());
+        c.update_shared_hash();
         c
     }
 }
 
 impl CommonStoreTraitInternal for Container {
-    fn current_blake3_hash(&self) -> [u8; 32] {
-        self.blake3_hash.get()
+    fn current_shared_hash(&self) -> [u8; 32] {
+        self.shared_hash.get()
     }
 
-    fn update_blake3_hash(&mut self) {
+    fn update_current_hash(&mut self) {
+        unimplemented!()
+    }
+
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear();
+    }
+
+    fn has_changed(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
+    }
+
+    fn update_shared_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
         h.update(&[0x01]);
@@ -366,22 +397,19 @@ impl CommonStoreTraitInternal for Container {
         h.update(&(self.items.len() as u64).to_le_bytes());
 
         // Sort keys for deterministic hashing
-        let mut keys: Vec<&StoreKey> = self.items.keys().collect();
+        let mut keys: Vec<StoreKey> = self.items.keys().cloned().collect();
         keys.sort_by(|a, b| a.as_str().cmp(b.as_str()));
 
         for key in keys {
             h.update(&key.current_blake3_hash());
-            if let Some(value) = self.items.get(key) {
-                h.update(&value.current_blake3_hash());
+            if let Some(value) = self.items.get_mut(&key) {
+                value.update_shared_hash();
+                h.update(&value.current_shared_hash());
             }
         }
 
         let digest = h.finalize();
-        self.blake3_hash.set(*digest.as_bytes());
-    }
-
-    fn clear_hash(&mut self) {
-        self.blake3_hash.clear();
+        self.shared_hash.set(*digest.as_bytes());
     }
 }
 
