@@ -26,8 +26,19 @@ pub enum Segment {
     StructItem(StoreKey),
 }
 
+impl Segment {
+    /// Returns the key associated with the segment.
+    pub(crate) fn key(&self) -> &StoreKey {
+        match self {
+            Segment::Property(key) => key,
+            Segment::MapKey(key) => key,
+            Segment::StructItem(key) => key,
+        }
+    }
+}
+
 /// A path to a piece of data within the store.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorePath {
     object_key: StoreKey,
     segments: Vec<Segment>,
@@ -232,6 +243,25 @@ impl StorePath {
             kind: PathKind::Object,
         }
     }
+
+    pub fn get_last_key(&self) -> StoreKey {
+        self.segments
+            .last()
+            .map(|segment| segment.key().clone())
+            .unwrap_or_else(|| self.object_key.clone())
+    }
+}
+
+impl PartialEq<&StorePath> for StorePath {
+    fn eq(&self, other: &&StorePath) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<StorePath> for &StorePath {
+    fn eq(&self, other: &StorePath) -> bool {
+        *self == other
+    }
 }
 
 /// A macro to create a `StorePath` ergonomically.
@@ -257,17 +287,23 @@ macro_rules! path {
 }
 
 /// State for a `StorePathBuilder` pointing to an object.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ObjectState;
 /// State for a `StorePathBuilder` pointing to a property.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct PropertyState;
 /// State for a `StorePathBuilder` pointing to a map entry.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct MapEntryState;
 /// State for a `StorePathBuilder` pointing to a struct item.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StructItemState;
 /// State for a `StorePathBuilder` that can be in any state.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct AnyState;
 
 /// A builder for creating `StorePath` instances.
+#[derive(Debug, Clone, PartialEq, Eq)]
 pub struct StorePathBuilder<S> {
     object_key: StoreKey,
     segments: Vec<Segment>,
@@ -590,6 +626,27 @@ mod tests {
         let obj_path = path.get_object();
         assert_eq!(obj_path.to_string(), "obj");
         assert_eq!(obj_path.get_kind(), &PathKind::Object);
+    }
+
+    #[test]
+    fn test_path_equality() {
+        let p1 = path!("obj" / "prop" / "key");
+        let p2 = path!("obj" / "prop" / "key");
+        let p3 = path!("obj" / "prop" / "other");
+        let p4 = path!("other" / "prop" / "key");
+
+        assert_eq!(p1, p2);
+        assert_ne!(p1, p3);
+        assert_ne!(p1, p4);
+
+        let p5 = StorePath::new(store_key!("obj"));
+        let p6 = StorePath::new(store_key!("obj"));
+        assert_eq!(p5, p6);
+
+        // Reference comparisons
+        assert_eq!(p1, &p2);
+        assert_eq!(&p1, p2);
+        assert_eq!(&p1, &p2);
     }
 
     #[test]

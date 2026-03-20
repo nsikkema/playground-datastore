@@ -503,14 +503,3 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
     }
     Ok((parent_path, last_segment))
 }
-
-impl Segment {
-    /// Returns the key associated with the segment.
-    pub(crate) fn key(&self) -> &StoreKey {
-        match self {
-            Segment::Property(key) => key,
-            Segment::MapKey(key) => key,
-            Segment::StructItem(key) => key,
-        }
-    }
-}
