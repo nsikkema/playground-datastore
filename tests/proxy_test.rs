@@ -4,7 +4,65 @@ use datastore::definition::{
 };
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store};
-use datastore::store_key;
+use datastore::{StoreError, path, store_key};
+
+#[test]
+fn test_proxy_basic() {
+    let store = Store::new(SharedStringStore::new());
+
+    // 1. Create Object Definition
+    let basic_definition = BasicDefinition::new_string("The name");
+    let mut builder = ObjectDefinition::builder("Test Object");
+    builder.insert(
+        store_key!("name"),
+        PropertyDefinition::new("Name", basic_definition.clone()),
+    );
+    let obj_def = builder.finish();
+
+    // 2. Create Object in Store
+    let obj_key = store_key!("my_object");
+    let mut obj_proxy = store.create_object(obj_key, &obj_def).unwrap();
+
+    assert_eq!(obj_proxy.description().as_ref(), "Test Object");
+
+    // 3. Get Basic Property Proxy
+    let mut name_proxy = obj_proxy.basic(store_key!("name")).unwrap();
+    assert_eq!(name_proxy.value().as_ref(), "");
+    assert_eq!(name_proxy.definition(), basic_definition);
+    assert_eq!(basic_definition, name_proxy.definition());
+    assert_eq!(name_proxy.path(), path!("my_object" / "name"));
+    assert_eq!(name_proxy.description(), "The name");
+    assert_eq!(name_proxy.pull(), Ok(()));
+
+    // 4. Set Value and Push
+    name_proxy.set_value("Junie");
+    assert!(name_proxy.has_changed());
+    name_proxy.push().unwrap();
+    assert!(!name_proxy.has_changed());
+
+    // 5. Test Delete and Restore Check
+    let static_store = store.to_static().unwrap();
+    assert_eq!(store.delete_object(obj_key.as_str()), Ok(()));
+    assert_eq!(
+        store.object(obj_key.as_str()).err(),
+        Some(StoreError::ObjectNotFound)
+    );
+    assert_eq!(name_proxy.pull().err(), Some(StoreError::ExpiredProxy));
+    assert_eq!(name_proxy.push().err(), Some(StoreError::ExpiredProxy));
+
+    name_proxy.set_value("Ralph");
+    assert_eq!(name_proxy.value(), "Ralph");
+    assert_eq!(name_proxy.is_valid(), false);
+
+    assert_eq!(store.sync_from_static(&static_store), Ok(()));
+    assert_eq!(name_proxy.pull(), Ok(()));
+    assert_eq!(name_proxy.value(), "Junie");
+
+    //
+
+    // 8. Test Format
+    assert_eq!(format!("{}", name_proxy), "name: Junie (The name)\n")
+}
 
 #[test]
 fn test_complex_proxy_structure() {
