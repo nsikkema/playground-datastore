@@ -191,31 +191,46 @@ impl CommonStoreTraitInternal for Table {
 }
 
 impl TreePrint for Table {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: [Table, {} rows] ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.rows.len(),
             self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         for (i, row) in self.rows.iter().enumerate() {
             let row_last = i == self.rows.len() - 1;
-            println!("{}{}Row {}", next_prefix, Self::branch_char(row_last), i);
+            writeln!(
+                f,
+                "{}{}Row {}",
+                next_prefix,
+                Self::branch_char(&next_prefix, row_last),
+                i
+            )?;
             let row_prefix = Self::next_prefix(&next_prefix, row_last);
             let keys: Vec<_> = row.keys().collect();
             for (j, key) in keys.iter().enumerate() {
                 let cell_last = j == keys.len() - 1;
-                println!(
+                writeln!(
+                    f,
                     "{}{}{}: {}",
                     row_prefix,
-                    Self::branch_char(cell_last),
+                    Self::branch_char(&row_prefix, cell_last),
                     key,
                     row.get(*key).unwrap()
-                );
+                )?;
             }
         }
+        Ok(())
     }
 }

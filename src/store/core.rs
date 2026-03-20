@@ -388,21 +388,6 @@ impl Store {
         self.object(object_key)
     }
 
-    /// Prints the entire store as a tree for debugging.
-    pub fn tree_print(&self) {
-        println!("Store");
-        let objects = self.internal.objects.read();
-        let mut keys: Vec<_> = objects.keys().collect();
-        keys.sort();
-
-        for (i, key) in keys.iter().enumerate() {
-            let last = i == keys.len() - 1;
-            if let Some(container) = objects.get(*key) {
-                container.tree_print(key.as_str(), "", last);
-            }
-        }
-    }
-
     pub fn to_static(&self) -> Result<StaticStore, StoreError> {
         StaticStore::try_from(self)
     }
@@ -502,4 +487,37 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
         }
     }
     Ok((parent_path, last_segment))
+}
+
+impl TreePrint for Store {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(f, "{}{}{}", prefix, Self::branch_char(prefix, last), label)?;
+        let mut next_prefix = Self::next_prefix(prefix, last);
+        next_prefix.pop();
+        next_prefix.pop();
+
+        let objects = self.internal.objects.read();
+        let mut keys: Vec<_> = objects.keys().collect();
+        keys.sort();
+
+        for (i, key) in keys.iter().enumerate() {
+            let is_last = i == keys.len() - 1;
+            if let Some(container) = objects.get(*key) {
+                container.tree_print(f, key.as_str(), &next_prefix, is_last)?;
+            }
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for Store {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.tree_display("Store").fmt(f)
+    }
 }

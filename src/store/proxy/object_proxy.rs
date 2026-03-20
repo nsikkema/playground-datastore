@@ -1,7 +1,8 @@
 use crate::definition::ObjectDefinition;
 use crate::shareable_string::ShareableString;
+use crate::store::traits::TreePrint;
 use crate::store::{
-    BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, TableProxy, TreePrint,
+    BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, TableProxy,
 };
 use crate::{StoreError, StoreKey, StorePath};
 
@@ -103,13 +104,6 @@ impl ObjectProxy {
     pub fn all_property_keys(&self) -> Result<Vec<StoreKey>, StoreError> {
         Ok(self.keys.clone())
     }
-
-    /// Prints the object as a tree for debugging.
-    pub fn tree_print(&self) {
-        if let Ok(object) = self.store.get_object_internal(self.path.object_key()) {
-            object.tree_print(self.path.object_key().as_str(), "", true);
-        }
-    }
 }
 
 impl ProxyStoreTrait for ObjectProxy {
@@ -153,5 +147,33 @@ impl ProxyStoreTrait for ObjectProxy {
     fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
+    }
+}
+
+impl TreePrint for ObjectProxy {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        if let Ok(object) = self.store.get_object_internal(self.path.object_key()) {
+            object.tree_print(f, label, prefix, last)
+        } else {
+            writeln!(
+                f,
+                "{}{}{}: Error - Object not found",
+                prefix,
+                Self::branch_char(prefix, last),
+                label
+            )
+        }
+    }
+}
+
+impl std::fmt::Display for ObjectProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.tree_display(self.path.object_key().as_str()).fmt(f)
     }
 }

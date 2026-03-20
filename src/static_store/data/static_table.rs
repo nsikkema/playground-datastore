@@ -98,31 +98,46 @@ impl From<&Table> for StaticTable {
 }
 
 impl TreePrint for StaticTable {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: Table ({} rows) - {}",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.rows.len(),
             self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         for (i, row) in self.rows.iter().enumerate() {
             let is_last_row = i == self.rows.len() - 1;
-            println!("{}{}Row {}", next_prefix, Self::branch_char(is_last_row), i);
+            writeln!(
+                f,
+                "{}{}Row {}",
+                next_prefix,
+                Self::branch_char(&next_prefix, is_last_row),
+                i
+            )?;
             let row_prefix = Self::next_prefix(&next_prefix, is_last_row);
             let entries: Vec<_> = row.iter().collect();
             for (j, (key, value)) in entries.iter().enumerate() {
                 let is_last_key = j == entries.len() - 1;
-                println!(
+                writeln!(
+                    f,
                     "{}{}{}: {}",
                     row_prefix,
-                    Self::branch_char(is_last_key),
+                    Self::branch_char(&row_prefix, is_last_key),
                     key.as_str(),
                     value
-                );
+                )?;
             }
         }
+        Ok(())
     }
 }

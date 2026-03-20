@@ -49,10 +49,16 @@ impl StaticStructItem {
 }
 
 impl TreePrint for StaticStructItem {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         match self {
-            StaticStructItem::Basic(basic) => basic.tree_print(label, prefix, last),
-            StaticStructItem::Table(table) => table.tree_print(label, prefix, last),
+            StaticStructItem::Basic(basic) => basic.tree_print(f, label, prefix, last),
+            StaticStructItem::Table(table) => table.tree_print(f, label, prefix, last),
         }
     }
 }
@@ -174,21 +180,29 @@ impl TryFrom<&Container> for StaticStruct {
 }
 
 impl TreePrint for StaticStruct {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         let type_str = "Struct";
-        println!(
+        writeln!(
+            f,
             "{}{}{}: {} - {}",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             type_str,
             &self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         let entries: Vec<_> = self.items.iter().collect();
         for (i, (key, item)) in entries.iter().enumerate() {
             let is_last = i == entries.len() - 1;
-            item.tree_print(key.as_str(), &next_prefix, is_last);
+            item.tree_print(f, key.as_str(), &next_prefix, is_last)?;
         }
+        Ok(())
     }
 }

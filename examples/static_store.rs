@@ -149,8 +149,7 @@ fn main() {
     let static_store = store.to_static().expect("Failed to create static store");
 
     // 6. Demonstrate StaticStore functionality.
-    println!("--- Static Store Tree View ---");
-    static_store.tree_print();
+    println!("--- Static Store Tree View ---\n{}", static_store);
 
     // 7. Accessing data in StaticStore
     if let Some(obj) = static_store.get("example_item") {

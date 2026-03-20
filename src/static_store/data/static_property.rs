@@ -85,12 +85,18 @@ impl StaticProperty {
 }
 
 impl TreePrint for StaticProperty {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         match self {
-            Self::Basic(b) => b.tree_print(label, prefix, last),
-            Self::Table(t) => t.tree_print(label, prefix, last),
-            Self::Struct(s) => s.tree_print(label, prefix, last),
-            Self::Map(m) => m.tree_print(label, prefix, last),
+            Self::Basic(b) => b.tree_print(f, label, prefix, last),
+            Self::Table(t) => t.tree_print(f, label, prefix, last),
+            Self::Struct(s) => s.tree_print(f, label, prefix, last),
+            Self::Map(m) => m.tree_print(f, label, prefix, last),
         }
     }
 }

@@ -1,8 +1,7 @@
 use crate::definition::BasicDefinition;
 use crate::shareable_string::ShareableString;
-use crate::store::{
-    Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, TreePrint,
-};
+use crate::store::traits::TreePrint;
+use crate::store::{Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store};
 use crate::{StoreError, StorePath};
 
 /// A proxy for a basic data value in the store.
@@ -38,17 +37,6 @@ impl BasicProxy {
     /// Sets a new value in the proxy.
     pub fn set_value<S: Into<ShareableString>>(&mut self, value: S) {
         self.data.set(value.into());
-    }
-
-    /// Prints the basic property as a tree for debugging.
-    pub fn tree_print(&self) {
-        let label = self
-            .path
-            .segments()
-            .last()
-            .map(|s| s.key().as_str())
-            .unwrap_or_else(|| self.path.object_key().as_str());
-        self.data.tree_print(label, "", true);
     }
 }
 
@@ -99,5 +87,24 @@ impl ProxyStoreTrait for BasicProxy {
     fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
+    }
+}
+
+impl TreePrint for BasicProxy {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        self.data.tree_print(f, label, prefix, last)
+    }
+}
+
+impl std::fmt::Display for BasicProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = self.path.get_last_key();
+        self.tree_display(label.as_ref()).fmt(f)
     }
 }

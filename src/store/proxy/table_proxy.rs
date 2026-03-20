@@ -1,8 +1,7 @@
 use crate::definition::TableDefinition;
 use crate::shareable_string::ShareableString;
-use crate::store::{
-    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table, TreePrint,
-};
+use crate::store::traits::TreePrint;
+use crate::store::{CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table};
 use crate::{StoreError, StoreKey, StorePath};
 use std::collections::BTreeMap;
 
@@ -85,17 +84,6 @@ impl TableProxy {
             .collect();
         self.data.set_row(row_index, values)
     }
-
-    /// Prints the table as a tree for debugging.
-    pub fn tree_print(&self) {
-        let label = self
-            .path
-            .segments()
-            .last()
-            .map(|s| s.key().as_str())
-            .unwrap_or_else(|| self.path.object_key().as_str());
-        self.data.tree_print(label, "", true);
-    }
 }
 
 impl ProxyStoreTrait for TableProxy {
@@ -145,5 +133,24 @@ impl ProxyStoreTrait for TableProxy {
     fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
+    }
+}
+
+impl TreePrint for TableProxy {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        self.data.tree_print(f, label, prefix, last)
+    }
+}
+
+impl std::fmt::Display for TableProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = self.path.get_last_key();
+        self.tree_display(label.as_ref()).fmt(f)
     }
 }

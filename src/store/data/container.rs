@@ -16,6 +16,122 @@ pub(crate) enum ContainerItem {
     Container(Container),
 }
 
+impl ContainerItem {
+    pub(crate) fn matches_static(&self, static_property: &StaticProperty) -> bool {
+        match (self, static_property) {
+            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
+                b.definition() == sb.definition()
+            }
+            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
+                t.definition() == st.definition()
+            }
+            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
+                matches!(c.definition(), ContainerDefinition::Struct(def) if def == ss.definition())
+            }
+            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
+                matches!(c.definition(), ContainerDefinition::Map(def) if def == sm.definition())
+            }
+            _ => false,
+        }
+    }
+
+    pub(crate) fn update_from_static(
+        &mut self,
+        static_property: &StaticProperty,
+    ) -> Result<(), StoreError> {
+        match (self, static_property) {
+            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
+                b.update_from_static(sb);
+                Ok(())
+            }
+            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
+                t.update_from_static(st);
+                Ok(())
+            }
+            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
+                c.update_from_static_struct(ss.items());
+                Ok(())
+            }
+            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
+                c.update_from_static_map(sm.items());
+                Ok(())
+            }
+            _ => Err(StoreError::SchemaMismatch(
+                "Type mismatch in update_from_static - should have been checked by matches_static"
+                    .into(),
+            )),
+        }
+    }
+}
+
+impl From<&StaticStructItem> for ContainerItem {
+    fn from(static_item: &StaticStructItem) -> Self {
+        match static_item {
+            StaticStructItem::Basic(b) => ContainerItem::Basic(Basic::from(b)),
+            StaticStructItem::Table(t) => ContainerItem::Table(Table::from(t)),
+        }
+    }
+}
+
+impl From<&StaticStruct> for ContainerItem {
+    fn from(static_struct: &StaticStruct) -> Self {
+        ContainerItem::Container(Container::from(static_struct))
+    }
+}
+
+impl From<&StaticProperty> for ContainerItem {
+    fn from(static_property: &StaticProperty) -> Self {
+        match static_property {
+            StaticProperty::Basic(b) => ContainerItem::Basic(Basic::from(b)),
+            StaticProperty::Table(t) => ContainerItem::Table(Table::from(t)),
+            StaticProperty::Struct(s) => ContainerItem::Container(Container::from(s)),
+            StaticProperty::Map(m) => ContainerItem::Container(Container::from(m)),
+        }
+    }
+}
+
+impl CommonStoreTraitInternal for ContainerItem {
+    fn current_blake3_hash(&self) -> [u8; 32] {
+        match self {
+            ContainerItem::Basic(item) => item.current_blake3_hash(),
+            ContainerItem::Table(item) => item.current_blake3_hash(),
+            ContainerItem::Container(item) => item.current_blake3_hash(),
+        }
+    }
+
+    fn update_blake3_hash(&mut self) {
+        match self {
+            ContainerItem::Basic(item) => item.update_blake3_hash(),
+            ContainerItem::Table(item) => item.update_blake3_hash(),
+            ContainerItem::Container(item) => item.update_blake3_hash(),
+        }
+    }
+
+    fn clear_hash(&mut self) {
+        match self {
+            ContainerItem::Basic(item) => item.clear_hash(),
+            ContainerItem::Table(item) => item.clear_hash(),
+            ContainerItem::Container(item) => item.clear_hash(),
+        }
+    }
+}
+
+impl TreePrint for ContainerItem {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        match self {
+            ContainerItem::Basic(b) => b.tree_print(f, label, prefix, last),
+            ContainerItem::Table(t) => t.tree_print(f, label, prefix, last),
+            ContainerItem::Container(c) => c.tree_print(f, label, prefix, last),
+        }
+    }
+}
+
 /// The definition for a `Container`.
 #[derive(Debug, Clone)]
 pub enum ContainerDefinition {
@@ -228,106 +344,6 @@ impl From<&StaticMap> for Container {
     }
 }
 
-impl From<&StaticStructItem> for ContainerItem {
-    fn from(static_item: &StaticStructItem) -> Self {
-        match static_item {
-            StaticStructItem::Basic(b) => ContainerItem::Basic(Basic::from(b)),
-            StaticStructItem::Table(t) => ContainerItem::Table(Table::from(t)),
-        }
-    }
-}
-
-impl From<&StaticStruct> for ContainerItem {
-    fn from(static_struct: &StaticStruct) -> Self {
-        ContainerItem::Container(Container::from(static_struct))
-    }
-}
-
-impl From<&StaticProperty> for ContainerItem {
-    fn from(static_property: &StaticProperty) -> Self {
-        match static_property {
-            StaticProperty::Basic(b) => ContainerItem::Basic(Basic::from(b)),
-            StaticProperty::Table(t) => ContainerItem::Table(Table::from(t)),
-            StaticProperty::Struct(s) => ContainerItem::Container(Container::from(s)),
-            StaticProperty::Map(m) => ContainerItem::Container(Container::from(m)),
-        }
-    }
-}
-
-impl ContainerItem {
-    pub(crate) fn matches_static(&self, static_property: &StaticProperty) -> bool {
-        match (self, static_property) {
-            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
-                b.definition() == sb.definition()
-            }
-            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
-                t.definition() == st.definition()
-            }
-            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
-                matches!(c.definition(), ContainerDefinition::Struct(def) if def == ss.definition())
-            }
-            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
-                matches!(c.definition(), ContainerDefinition::Map(def) if def == sm.definition())
-            }
-            _ => false,
-        }
-    }
-
-    pub(crate) fn update_from_static(
-        &mut self,
-        static_property: &StaticProperty,
-    ) -> Result<(), StoreError> {
-        match (self, static_property) {
-            (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
-                b.update_from_static(sb);
-                Ok(())
-            }
-            (ContainerItem::Table(t), StaticProperty::Table(st)) => {
-                t.update_from_static(st);
-                Ok(())
-            }
-            (ContainerItem::Container(c), StaticProperty::Struct(ss)) => {
-                c.update_from_static_struct(ss.items());
-                Ok(())
-            }
-            (ContainerItem::Container(c), StaticProperty::Map(sm)) => {
-                c.update_from_static_map(sm.items());
-                Ok(())
-            }
-            _ => Err(StoreError::SchemaMismatch(
-                "Type mismatch in update_from_static - should have been checked by matches_static"
-                    .into(),
-            )),
-        }
-    }
-}
-
-impl CommonStoreTraitInternal for ContainerItem {
-    fn current_blake3_hash(&self) -> [u8; 32] {
-        match self {
-            ContainerItem::Basic(item) => item.current_blake3_hash(),
-            ContainerItem::Table(item) => item.current_blake3_hash(),
-            ContainerItem::Container(item) => item.current_blake3_hash(),
-        }
-    }
-
-    fn update_blake3_hash(&mut self) {
-        match self {
-            ContainerItem::Basic(item) => item.update_blake3_hash(),
-            ContainerItem::Table(item) => item.update_blake3_hash(),
-            ContainerItem::Container(item) => item.update_blake3_hash(),
-        }
-    }
-
-    fn clear_hash(&mut self) {
-        match self {
-            ContainerItem::Basic(item) => item.clear_hash(),
-            ContainerItem::Table(item) => item.clear_hash(),
-            ContainerItem::Container(item) => item.clear_hash(),
-        }
-    }
-}
-
 impl CommonStoreTraitInternal for Container {
     fn current_blake3_hash(&self) -> [u8; 32] {
         self.blake3_hash.get()
@@ -369,18 +385,14 @@ impl CommonStoreTraitInternal for Container {
     }
 }
 
-impl TreePrint for ContainerItem {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        match self {
-            ContainerItem::Basic(b) => b.tree_print(label, prefix, last),
-            ContainerItem::Table(t) => t.tree_print(label, prefix, last),
-            ContainerItem::Container(c) => c.tree_print(label, prefix, last),
-        }
-    }
-}
-
 impl TreePrint for Container {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         let type_str = match &self.definition {
             ContainerDefinition::Struct(_) => "Struct",
             ContainerDefinition::Map(_) => "Map",
@@ -390,14 +402,15 @@ impl TreePrint for Container {
             ContainerDefinition::Map(m) => m.description(),
         };
 
-        println!(
+        writeln!(
+            f,
             "{}{}{}: [{}] ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             type_str,
             description
-        );
+        )?;
 
         let next_prefix = Self::next_prefix(prefix, last);
         let mut keys: Vec<_> = self.items.keys().collect();
@@ -406,8 +419,9 @@ impl TreePrint for Container {
         for (i, key) in keys.iter().enumerate() {
             let item_last = i == keys.len() - 1;
             if let Some(item) = self.items.get(*key) {
-                item.tree_print(key.as_str(), &next_prefix, item_last);
+                item.tree_print(f, key.as_str(), &next_prefix, item_last)?;
             }
         }
+        Ok(())
     }
 }

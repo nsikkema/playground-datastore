@@ -196,14 +196,21 @@ impl CommonStoreTraitInternal for Object {
 }
 
 impl TreePrint for Object {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: [Object] ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.definition.description()
-        );
+        )?;
 
         let next_prefix = Self::next_prefix(prefix, last);
         let mut keys: Vec<_> = self.items.keys().collect();
@@ -212,8 +219,9 @@ impl TreePrint for Object {
         for (i, key) in keys.iter().enumerate() {
             let item_last = i == keys.len() - 1;
             if let Some(item) = self.items.get(*key) {
-                item.tree_print(key.as_str(), &next_prefix, item_last);
+                item.tree_print(f, key.as_str(), &next_prefix, item_last)?;
             }
         }
+        Ok(())
     }
 }

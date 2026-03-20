@@ -88,21 +88,29 @@ impl TryFrom<&Object> for StaticObject {
 }
 
 impl TreePrint for StaticObject {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         let type_str = "Object";
-        println!(
+        writeln!(
+            f,
             "{}{}{}: {} - {}",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             type_str,
             &self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         let entries: Vec<_> = self.items.iter().collect();
         for (i, (key, item)) in entries.iter().enumerate() {
             let is_last = i == entries.len() - 1;
-            item.tree_print(key.as_str(), &next_prefix, is_last);
+            item.tree_print(f, key.as_str(), &next_prefix, is_last)?;
         }
+        Ok(())
     }
 }
