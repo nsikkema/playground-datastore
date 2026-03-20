@@ -1,7 +1,7 @@
 use crate::shareable_string::ShareableString;
+use crate::store::traits::TreePrint;
 use crate::store::{
     Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
-    TreePrint,
 };
 use crate::{StoreError, StoreKey, StorePath};
 
@@ -34,6 +34,24 @@ impl ContainerProxy {
             last_sync_hash,
         }
     }
+
+    /// Inserts a new entry into a map container and returns a proxy to it.
+    pub fn insert_map_entry<S: Into<StoreKey>>(
+        &self,
+        key: S,
+    ) -> Result<ContainerProxy, StoreError> {
+        let key = key.into();
+        match &self.definition {
+            ContainerDefinition::Map(map_def) => {
+                let entry_container = Container::new_struct(map_def.item_type().clone());
+                let entry_path = self.path.clone().to_builder().map_key(key).build()?;
+                self.store
+                    .update_container_at_path(&entry_path, entry_container)?;
+                self.store.container(&entry_path)
+            }
+            _ => Err(StoreError::PropertyNotFound),
+        }
+    }
 }
 
 impl ProxyStoreTrait for ContainerProxy {
@@ -58,7 +76,18 @@ impl ProxyStoreTrait for ContainerProxy {
 
     fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.container(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition == self.definition {
+                self.keys = proxy.keys;
+                self.object_hash = proxy.object_hash;
+                self.last_sync_hash = proxy.last_sync_hash;
+                return Ok(());
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
         if !self.has_changed() {
             return Ok(());
@@ -74,9 +103,20 @@ impl ProxyStoreTrait for ContainerProxy {
 
     fn push(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.container(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition == self.definition {
+                self.keys = proxy.keys;
+                self.object_hash = proxy.object_hash;
+                self.last_sync_hash = proxy.last_sync_hash;
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
+        self.last_sync_hash = self.object_hash.get(); // Sync hash after push
         Ok(())
     }
 
@@ -86,35 +126,31 @@ impl ProxyStoreTrait for ContainerProxy {
     }
 }
 
-impl ContainerProxy {
-    /// Inserts a new entry into a map container and returns a proxy to it.
-    pub fn insert_map_entry<S: Into<StoreKey>>(
+impl TreePrint for ContainerProxy {
+    fn tree_print(
         &self,
-        key: S,
-    ) -> Result<ContainerProxy, StoreError> {
-        let key = key.into();
-        match &self.definition {
-            ContainerDefinition::Map(map_def) => {
-                let entry_container = Container::new_struct(map_def.item_type().clone());
-                let entry_path = self.path.clone().to_builder().map_key(key).build()?;
-                self.store
-                    .update_container_at_path(&entry_path, entry_container)?;
-                self.store.container(&entry_path)
-            }
-            _ => Err(StoreError::PropertyNotFound),
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        if let Ok(container) = self.store.get_container_internal(&self.path) {
+            container.tree_print(f, label, prefix, last)
+        } else {
+            writeln!(
+                f,
+                "{}{}{}: Error - Container not found",
+                prefix,
+                Self::branch_char(prefix, last),
+                label
+            )
         }
     }
+}
 
-    /// Prints the container as a tree for debugging.
-    pub fn tree_print(&self) {
-        if let Ok(container) = self.store.get_container_internal(&self.path) {
-            let label = self
-                .path
-                .segments()
-                .last()
-                .map(|s| s.key().as_str())
-                .unwrap_or_else(|| self.path.object_key().as_str());
-            container.tree_print(label, "", true);
-        }
+impl std::fmt::Display for ContainerProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = self.path.get_last_key();
+        self.tree_display(label.as_ref()).fmt(f)
     }
 }

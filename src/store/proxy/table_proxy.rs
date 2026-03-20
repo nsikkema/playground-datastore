@@ -1,8 +1,7 @@
 use crate::definition::TableDefinition;
 use crate::shareable_string::ShareableString;
-use crate::store::{
-    CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table, TreePrint,
-};
+use crate::store::traits::TreePrint;
+use crate::store::{CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table};
 use crate::{StoreError, StoreKey, StorePath};
 use std::collections::BTreeMap;
 
@@ -11,19 +10,12 @@ pub struct TableProxy {
     path: StorePath,
     store: Store,
     data: Table,
-    last_sync_hash: [u8; 32],
 }
 
 impl TableProxy {
     /// Creates a new `TableProxy`.
     pub(crate) fn new(path: StorePath, store: Store, data: Table) -> Self {
-        let last_sync_hash = data.current_blake3_hash();
-        Self {
-            path,
-            store,
-            data,
-            last_sync_hash,
-        }
+        Self { path, store, data }
     }
 
     /// Returns a reference to the table definition.
@@ -85,17 +77,6 @@ impl TableProxy {
             .collect();
         self.data.set_row(row_index, values)
     }
-
-    /// Prints the table as a tree for debugging.
-    pub fn tree_print(&self) {
-        let label = self
-            .path
-            .segments()
-            .last()
-            .map(|s| s.key().as_str())
-            .unwrap_or_else(|| self.path.object_key().as_str());
-        self.data.tree_print(label, "", true);
-    }
 }
 
 impl ProxyStoreTrait for TableProxy {
@@ -108,16 +89,25 @@ impl ProxyStoreTrait for TableProxy {
     }
 
     fn is_valid(&self) -> bool {
-        self.data.current_blake3_hash() != [0u8; 32]
+        self.data.is_valid()
     }
 
     fn has_changed(&self) -> bool {
-        self.last_sync_hash != self.data.current_blake3_hash()
+        self.data.has_changed()
     }
 
     fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.table(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition() == self.definition() {
+                self.data = proxy.data;
+                return Ok(());
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
         if !self.has_changed() {
@@ -127,23 +117,49 @@ impl ProxyStoreTrait for TableProxy {
         let proxy = self.store.table(&self.path)?;
 
         self.data = proxy.data;
-        self.last_sync_hash = proxy.last_sync_hash;
 
         Ok(())
     }
 
     fn push(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
-            return Err(StoreError::ExpiredProxy);
+            let proxy = match self.store.table(&self.path) {
+                Ok(p) => p,
+                Err(_) => return Err(StoreError::ExpiredProxy),
+            };
+            if proxy.definition() == self.definition() {
+                self.data = proxy.data;
+            } else {
+                return Err(StoreError::ExpiredProxy);
+            }
         }
 
         self.store.set_table(&self.path, &self.data)?;
-        self.last_sync_hash = self.data.current_blake3_hash();
+        self.data.update_shared_hash(); // Sync shared hash after successful push
         Ok(())
     }
 
     fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
+    }
+}
+
+impl TreePrint for TableProxy {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        self.data.tree_print(f, label, prefix, last)
+    }
+}
+
+impl std::fmt::Display for TableProxy {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        let label = self.path.get_last_key();
+        self.tree_display(label.as_ref()).fmt(f)
     }
 }

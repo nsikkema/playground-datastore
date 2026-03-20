@@ -54,20 +54,27 @@ impl From<&Basic> for StaticBasic {
         Self {
             definition: basic.definition().clone(),
             value: basic.get(),
-            hash: basic.current_blake3_hash(),
+            hash: basic.current_shared_hash(),
         }
     }
 }
 
 impl TreePrint for StaticBasic {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: {} ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.value,
             self.definition.description()
-        );
+        )
     }
 }

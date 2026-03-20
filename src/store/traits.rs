@@ -1,15 +1,22 @@
 use super::ObjectProxy;
 use crate::shareable_string::ShareableString;
 use crate::{StoreError, StorePath};
+use std::fmt;
 
 /// Internal trait for common store operations related to hashing.
 pub(crate) trait CommonStoreTraitInternal {
-    /// Returns the current BLAKE3 hash.
-    fn current_blake3_hash(&self) -> [u8; 32];
-    /// Updates the BLAKE3 hash.
-    fn update_blake3_hash(&mut self);
-    /// Clears the current hash.
-    fn clear_hash(&mut self);
+    /// Returns the current shared BLAKE3 hash.
+    fn current_shared_hash(&self) -> [u8; 32];
+    /// Returns a new BLAKE3 Hash for the object.
+    fn update_current_hash(&mut self);
+    /// Force sync shared hash.
+    fn update_shared_hash(&mut self);
+    /// Clears the current shared hash.
+    fn clear_shared_hash(&mut self);
+    /// Check if de-synced from the original store.
+    fn has_changed(&self) -> bool;
+    /// Check if the original store still exists.
+    fn is_valid(&self) -> bool;
 }
 
 /// Trait for proxy objects that provide access to store data.
@@ -33,7 +40,13 @@ pub trait ProxyStoreTrait {
 /// Trait for types that can be printed as a tree for debugging.
 pub trait TreePrint {
     /// Prints the object as a tree with the given label and prefix.
-    fn tree_print(&self, label: &str, prefix: &str, last: bool);
+    fn tree_print(
+        &self,
+        f: &mut fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> fmt::Result;
 
     /// Helper to get the correct prefix for the next level.
     fn next_prefix(prefix: &str, last: bool) -> String {
@@ -41,7 +54,35 @@ pub trait TreePrint {
     }
 
     /// Helper to get the branch character.
-    fn branch_char(last: bool) -> &'static str {
-        if last { "└── " } else { "├── " }
+    fn branch_char(prefix: &str, last: bool) -> &'static str {
+        if prefix.is_empty() {
+            ""
+        } else if last {
+            "└── "
+        } else {
+            "├── "
+        }
+    }
+
+    /// Returns a `TreeDisplay` for the given item.
+    fn tree_display(&self, label: &str) -> TreeDisplay<'_, Self>
+    where
+        Self: Sized,
+    {
+        TreeDisplay {
+            item: self,
+            label: label.to_string(),
+        }
+    }
+}
+
+pub struct TreeDisplay<'a, T: TreePrint> {
+    pub item: &'a T,
+    pub label: String,
+}
+
+impl<'a, T: TreePrint> fmt::Display for TreeDisplay<'a, T> {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        self.item.tree_print(f, &self.label, "", true)
     }
 }

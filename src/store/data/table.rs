@@ -10,7 +10,8 @@ use std::collections::BTreeMap;
 pub struct Table {
     definition: TableDefinition,
     rows: Vec<BTreeMap<StoreKey, ShareableString>>,
-    blake3_hash: StoreHashContainer,
+    current_hash: [u8; 32],
+    shared_hash: StoreHashContainer,
 }
 
 impl Table {
@@ -19,9 +20,11 @@ impl Table {
         let mut s = Self {
             definition,
             rows: Vec::new(),
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: [0u8; 32],
+            shared_hash: StoreHashContainer::new(),
         };
-        s.update_blake3_hash();
+        s.update_current_hash();
+        s.update_shared_hash();
         s
     }
 
@@ -38,9 +41,10 @@ impl Table {
                         .collect()
                 })
                 .collect(),
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: self.current_hash,
+            shared_hash: StoreHashContainer::new(),
         };
-        s.update_blake3_hash();
+        s.update_shared_hash();
         s
     }
 
@@ -63,7 +67,7 @@ impl Table {
     pub(crate) fn append_row(&mut self) {
         let default_row = self.default_row();
         self.rows.push(default_row);
-        self.update_blake3_hash();
+        self.update_current_hash();
     }
 
     /// Inserts a new row with default values at the specified index.
@@ -75,7 +79,7 @@ impl Table {
 
         let default_row = self.default_row();
         self.rows.insert(index, default_row);
-        self.update_blake3_hash();
+        self.update_current_hash();
     }
 
     /// Removes the row at the specified index.
@@ -85,7 +89,7 @@ impl Table {
         }
 
         self.rows.remove(index);
-        self.update_blake3_hash();
+        self.update_current_hash();
         Ok(())
     }
 
@@ -105,7 +109,7 @@ impl Table {
         if let Some(row) = self.rows.get_mut(row_index) {
             if let Some(cell) = row.get_mut(column_key) {
                 *cell = value;
-                self.update_blake3_hash();
+                self.update_current_hash();
                 Ok(())
             } else {
                 Err(StoreError::KeyNotFound)
@@ -127,7 +131,7 @@ impl Table {
                     *cell = value;
                 }
             }
-            self.update_blake3_hash();
+            self.update_current_hash();
             Ok(())
         } else {
             Err(StoreError::IndexNotFound)
@@ -144,28 +148,30 @@ impl Table {
 
     pub(crate) fn update_from_static(&mut self, static_table: &StaticTable) {
         self.rows = static_table.rows().clone();
-        self.blake3_hash.set(static_table.hash());
+        self.shared_hash.set(static_table.hash());
     }
 }
 
 impl From<&StaticTable> for Table {
     fn from(static_table: &StaticTable) -> Self {
+        let hash = static_table.hash();
         let s = Self {
             definition: static_table.definition().clone(),
             rows: static_table.rows().clone(),
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: hash,
+            shared_hash: StoreHashContainer::new(),
         };
-        s.blake3_hash.set(static_table.hash());
+        s.shared_hash.set(hash);
         s
     }
 }
 
 impl CommonStoreTraitInternal for Table {
-    fn current_blake3_hash(&self) -> [u8; 32] {
-        self.blake3_hash.get()
+    fn current_shared_hash(&self) -> [u8; 32] {
+        self.shared_hash.get()
     }
 
-    fn update_blake3_hash(&mut self) {
+    fn update_current_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -181,41 +187,67 @@ impl CommonStoreTraitInternal for Table {
             }
         }
 
-        let digest = h.finalize();
-        self.blake3_hash.set(*digest.as_bytes());
+        self.current_hash = *h.finalize().as_bytes()
     }
 
-    fn clear_hash(&mut self) {
-        self.blake3_hash.clear()
+    fn update_shared_hash(&mut self) {
+        self.shared_hash.set(self.current_hash);
+    }
+
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear()
+    }
+
+    fn has_changed(&self) -> bool {
+        self.current_hash != self.shared_hash.get()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
     }
 }
 
 impl TreePrint for Table {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: [Table, {} rows] ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.rows.len(),
             self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         for (i, row) in self.rows.iter().enumerate() {
             let row_last = i == self.rows.len() - 1;
-            println!("{}{}Row {}", next_prefix, Self::branch_char(row_last), i);
+            writeln!(
+                f,
+                "{}{}Row {}",
+                next_prefix,
+                Self::branch_char(&next_prefix, row_last),
+                i
+            )?;
             let row_prefix = Self::next_prefix(&next_prefix, row_last);
             let keys: Vec<_> = row.keys().collect();
             for (j, key) in keys.iter().enumerate() {
                 let cell_last = j == keys.len() - 1;
-                println!(
+                writeln!(
+                    f,
                     "{}{}{}: {}",
                     row_prefix,
-                    Self::branch_char(cell_last),
+                    Self::branch_char(&row_prefix, cell_last),
                     key,
                     row.get(*key).unwrap()
-                );
+                )?;
             }
         }
+        Ok(())
     }
 }

@@ -8,7 +8,8 @@ use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 pub struct Basic {
     definition: BasicDefinition,
     value: ShareableString,
-    blake3_hash: StoreHashContainer,
+    current_hash: [u8; 32],
+    shared_hash: StoreHashContainer,
 }
 
 impl Basic {
@@ -17,9 +18,11 @@ impl Basic {
         let mut s = Self {
             value: definition.default_value().clone(),
             definition,
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: [0; 32],
+            shared_hash: StoreHashContainer::new(),
         };
-        CommonStoreTraitInternal::update_blake3_hash(&mut s);
+        s.update_current_hash();
+        s.update_shared_hash();
         s
     }
 
@@ -28,9 +31,10 @@ impl Basic {
         let mut s = Self {
             definition: self.definition.launder(store),
             value: store.launder(&self.value),
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: self.current_hash,
+            shared_hash: StoreHashContainer::new(),
         };
-        s.update_blake3_hash();
+        s.update_shared_hash();
         s
     }
 
@@ -47,33 +51,36 @@ impl Basic {
     /// Sets a new value and updates the hash.
     pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
-        self.update_blake3_hash();
+        self.update_current_hash();
     }
 
     pub(crate) fn update_from_static(&mut self, static_basic: &StaticBasic) {
         self.value = static_basic.value().clone();
-        self.blake3_hash.set(static_basic.hash());
+        self.current_hash = static_basic.hash();
+        self.update_shared_hash();
     }
 }
 
 impl From<&StaticBasic> for Basic {
     fn from(static_basic: &StaticBasic) -> Self {
+        let hash = static_basic.hash();
         let s = Self {
             definition: static_basic.definition().clone(),
             value: static_basic.value().clone(),
-            blake3_hash: StoreHashContainer::new(),
+            current_hash: hash,
+            shared_hash: StoreHashContainer::new(),
         };
-        s.blake3_hash.set(static_basic.hash());
+        s.shared_hash.set(hash);
         s
     }
 }
 
 impl CommonStoreTraitInternal for Basic {
-    fn current_blake3_hash(&self) -> [u8; 32] {
-        self.blake3_hash.get()
+    fn current_shared_hash(&self) -> [u8; 32] {
+        self.shared_hash.get()
     }
 
-    fn update_blake3_hash(&mut self) {
+    fn update_current_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -82,24 +89,41 @@ impl CommonStoreTraitInternal for Basic {
 
         h.update(&self.value.current_blake3_hash());
 
-        let digest = h.finalize();
-        self.blake3_hash.set(*digest.as_bytes());
+        self.current_hash = *h.finalize().as_bytes()
+    }
+    fn update_shared_hash(&mut self) {
+        self.shared_hash.set(self.current_hash);
     }
 
-    fn clear_hash(&mut self) {
-        self.blake3_hash.clear();
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear();
+    }
+
+    fn has_changed(&self) -> bool {
+        self.current_hash != self.shared_hash.get()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
     }
 }
 
 impl TreePrint for Basic {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
-        println!(
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(
+            f,
             "{}{}{}: {} ({})",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             self.value,
             self.definition.description()
-        );
+        )
     }
 }

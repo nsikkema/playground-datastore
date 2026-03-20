@@ -236,3 +236,15 @@ impl BasicDefinition {
         }
     }
 }
+
+impl PartialEq<&BasicDefinition> for BasicDefinition {
+    fn eq(&self, other: &&BasicDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<BasicDefinition> for &BasicDefinition {
+    fn eq(&self, other: &BasicDefinition) -> bool {
+        *self == other
+    }
+}

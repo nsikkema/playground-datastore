@@ -90,3 +90,15 @@ impl TableDefinition {
         }
     }
 }
+
+impl PartialEq<&TableDefinition> for TableDefinition {
+    fn eq(&self, other: &&TableDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<TableDefinition> for &TableDefinition {
+    fn eq(&self, other: &TableDefinition) -> bool {
+        *self == other
+    }
+}

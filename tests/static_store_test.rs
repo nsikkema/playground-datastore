@@ -112,7 +112,7 @@ fn test_store_to_static() {
     }
 
     // Verify tree print doesn't crash
-    static_store.tree_print();
+    println!("{}", static_store);
 }
 
 #[test]
@@ -268,7 +268,7 @@ fn test_update_from_static_does_not_remove_missing_properties() {
         )
         .finish();
     store.create_object(obj_key.clone(), &def).unwrap();
-    store.tree_print();
+    println!("{}", store);
 
     // Create a static store with the same object but ONLY prop1 (updated)
     let other_store = Store::new(SharedStringStore::new());
@@ -290,7 +290,7 @@ fn test_update_from_static_does_not_remove_missing_properties() {
 
     // Update original store from static store
     store.sync_from_static(&static_store).unwrap();
-    store.tree_print();
+    println!("{}", store);
 
     // Verify prop1 was updated
     let mut proxy = store.object(obj_key.clone()).unwrap();
@@ -325,7 +325,7 @@ fn test_update_from_static_does_not_remove_missing_objects() {
         .finish();
     store.create_object(obj_key2.clone(), &def2).unwrap();
 
-    store.tree_print();
+    println!("{}", store);
 
     // Create a static store that only has object1 (updated)
     let other_store = Store::new(SharedStringStore::new());
@@ -342,10 +342,11 @@ fn test_update_from_static_does_not_remove_missing_objects() {
     prop1_proxy.set_value("Updated");
     prop1_proxy.push().unwrap();
     let static_store = other_store.to_static().unwrap();
+    println!("{}", static_store);
 
     // Update original store from static store
     store.merge_from_static(&static_store).unwrap();
-    store.tree_print();
+    println!("{}", store);
 
     // Verify object1 was updated
     let mut proxy1 = store.object(obj_key1.clone()).unwrap();
@@ -596,7 +597,7 @@ fn test_static_store_all_types() {
     let static_store = store.to_static().unwrap();
 
     // Print static store
-    static_store.tree_print();
+    println!("{}", static_store);
 
     // Verify hash consistency
     assert_eq!(store.get_blake3_hash(), static_store.get_blake3_hash());

@@ -1,8 +1,7 @@
 use crate::StoreError;
 use crate::StoreKey;
 use crate::static_store::data::StaticObject;
-use crate::store::Store;
-use crate::store::TreePrint;
+use crate::store::{Store, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
@@ -10,22 +9,6 @@ use std::collections::BTreeMap;
 pub struct StaticStore {
     objects: BTreeMap<StoreKey, StaticObject>,
     hash: [u8; 32],
-}
-
-impl TryFrom<&Store> for StaticStore {
-    type Error = StoreError;
-
-    fn try_from(store: &Store) -> Result<Self, Self::Error> {
-        let mut objects = BTreeMap::new();
-        if let Ok(keys) = store.object_keys() {
-            for key in keys {
-                if let Ok(object) = store.get_object_internal(&key) {
-                    objects.insert(key, StaticObject::try_from(&object)?);
-                }
-            }
-        }
-        Ok(Self::new(objects))
-    }
 }
 
 impl StaticStore {
@@ -57,15 +40,6 @@ impl StaticStore {
         self.hash = *digest.as_bytes();
     }
 
-    pub fn tree_print(&self) {
-        println!("Static Store");
-        let keys: Vec<_> = self.objects.keys().collect();
-        for (i, key) in keys.iter().enumerate() {
-            let is_last = i == keys.len() - 1;
-            self.objects[*key].tree_print(key.as_str(), "", is_last);
-        }
-    }
-
     pub fn get_blake3_hash(&self) -> [u8; 32] {
         self.hash
     }
@@ -80,5 +54,48 @@ impl StaticStore {
 
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticObject)> {
         self.objects.iter()
+    }
+}
+
+impl TryFrom<&Store> for StaticStore {
+    type Error = StoreError;
+
+    fn try_from(store: &Store) -> Result<Self, Self::Error> {
+        let mut objects = BTreeMap::new();
+        if let Ok(keys) = store.object_keys() {
+            for key in keys {
+                if let Ok(object) = store.get_object_internal(&key) {
+                    objects.insert(key, StaticObject::try_from(&object)?);
+                }
+            }
+        }
+        Ok(Self::new(objects))
+    }
+}
+
+impl TreePrint for StaticStore {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(f, "{}{}{}", prefix, Self::branch_char(prefix, last), label)?;
+        let mut next_prefix = Self::next_prefix(prefix, last);
+        next_prefix.pop();
+        next_prefix.pop();
+        let keys: Vec<_> = self.objects.keys().collect();
+        for (i, key) in keys.iter().enumerate() {
+            let is_last = i == keys.len() - 1;
+            self.objects[*key].tree_print(f, key.as_str(), &next_prefix, is_last)?;
+        }
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for StaticStore {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.tree_display("Static Store").fmt(f)
     }
 }

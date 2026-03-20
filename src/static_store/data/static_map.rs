@@ -23,7 +23,7 @@ impl StaticMap {
         let item_type = if let Some(first_item) = items.values().next() {
             let first_def = first_item.definition().clone();
             for item in items.values().skip(1) {
-                if item.definition() != &first_def {
+                if first_def != *item.definition() {
                     return Err(StoreError::SchemaMismatch(format!(
                         "StaticMap items must have the same struct definition. Expected: {:?}, Found: {:?}",
                         first_def,
@@ -105,21 +105,29 @@ impl TryFrom<&Container> for StaticMap {
 }
 
 impl TreePrint for StaticMap {
-    fn tree_print(&self, label: &str, prefix: &str, last: bool) {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
         let type_str = "Map";
-        println!(
+        writeln!(
+            f,
             "{}{}{}: {} - {}",
             prefix,
-            Self::branch_char(last),
+            Self::branch_char(prefix, last),
             label,
             type_str,
             &self.definition.description()
-        );
+        )?;
         let next_prefix = Self::next_prefix(prefix, last);
         let entries: Vec<_> = self.items.iter().collect();
         for (i, (key, item)) in entries.iter().enumerate() {
             let is_last = i == entries.len() - 1;
-            item.tree_print(key.as_str(), &next_prefix, is_last);
+            item.tree_print(f, key.as_str(), &next_prefix, is_last)?;
         }
+        Ok(())
     }
 }

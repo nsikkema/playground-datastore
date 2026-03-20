@@ -117,6 +117,5 @@ fn main() {
         );
     }
 
-    println!("\nFull Store Tree Print:");
-    store.tree_print();
+    println!("\nFull Store Tree Print:\n{}", store);
 }

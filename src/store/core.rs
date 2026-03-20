@@ -51,7 +51,7 @@ impl StoreInternal {
 
         for key in keys {
             h.update(&key.current_blake3_hash());
-            h.update(&objects.get(key).unwrap().current_blake3_hash());
+            h.update(&objects.get(key).unwrap().current_shared_hash());
         }
 
         let digest = h.finalize();
@@ -164,7 +164,7 @@ impl Store {
 
         let keys = object.keys();
         let object_hash = object.hash_container().clone();
-        let last_sync_hash = object.current_blake3_hash();
+        let last_sync_hash = object.current_shared_hash();
 
         let store_path = StorePath::builder(StoreKey::new_unsafe(key)).build();
 
@@ -238,7 +238,7 @@ impl Store {
         let container = self.get_container_internal(store_path)?;
         let keys = container.keys();
         let object_hash = container.hash_container().clone();
-        let last_sync_hash = container.current_blake3_hash();
+        let last_sync_hash = container.current_shared_hash();
 
         Ok(ContainerProxy::new(
             store_path.clone(),
@@ -320,7 +320,7 @@ impl Store {
         path: &StorePath,
         mut container: Container,
     ) -> Result<(), StoreError> {
-        container.update_blake3_hash();
+        container.update_shared_hash();
         let segments = path.segments();
 
         if segments.is_empty() {
@@ -386,21 +386,6 @@ impl Store {
 
         self.internal.add_object(&object_key, &container)?;
         self.object(object_key)
-    }
-
-    /// Prints the entire store as a tree for debugging.
-    pub fn tree_print(&self) {
-        println!("Store");
-        let objects = self.internal.objects.read();
-        let mut keys: Vec<_> = objects.keys().collect();
-        keys.sort();
-
-        for (i, key) in keys.iter().enumerate() {
-            let last = i == keys.len() - 1;
-            if let Some(container) = objects.get(*key) {
-                container.tree_print(key.as_str(), "", last);
-            }
-        }
     }
 
     pub fn to_static(&self) -> Result<StaticStore, StoreError> {
@@ -504,13 +489,35 @@ fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
     Ok((parent_path, last_segment))
 }
 
-impl Segment {
-    /// Returns the key associated with the segment.
-    pub(crate) fn key(&self) -> &StoreKey {
-        match self {
-            Segment::Property(key) => key,
-            Segment::MapKey(key) => key,
-            Segment::StructItem(key) => key,
+impl TreePrint for Store {
+    fn tree_print(
+        &self,
+        f: &mut std::fmt::Formatter<'_>,
+        label: &str,
+        prefix: &str,
+        last: bool,
+    ) -> std::fmt::Result {
+        writeln!(f, "{}{}{}", prefix, Self::branch_char(prefix, last), label)?;
+        let mut next_prefix = Self::next_prefix(prefix, last);
+        next_prefix.pop();
+        next_prefix.pop();
+
+        let objects = self.internal.objects.read();
+        let mut keys: Vec<_> = objects.keys().collect();
+        keys.sort();
+
+        for (i, key) in keys.iter().enumerate() {
+            let is_last = i == keys.len() - 1;
+            if let Some(container) = objects.get(*key) {
+                container.tree_print(f, key.as_str(), &next_prefix, is_last)?;
+            }
         }
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for Store {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.tree_display("Store").fmt(f)
     }
 }
