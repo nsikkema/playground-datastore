@@ -42,3 +42,15 @@ impl MapDefinition {
         }
     }
 }
+
+impl PartialEq<&MapDefinition> for MapDefinition {
+    fn eq(&self, other: &&MapDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<MapDefinition> for &MapDefinition {
+    fn eq(&self, other: &MapDefinition) -> bool {
+        *self == other
+    }
+}

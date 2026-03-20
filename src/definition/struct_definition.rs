@@ -36,6 +36,18 @@ impl StructItemDefinition {
     }
 }
 
+impl PartialEq<&StructItemDefinition> for StructItemDefinition {
+    fn eq(&self, other: &&StructItemDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<StructItemDefinition> for &StructItemDefinition {
+    fn eq(&self, other: &StructItemDefinition) -> bool {
+        *self == other
+    }
+}
+
 /// Definition for a structured property, which is a collection of named `StructItemDefinition`s.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct StructDefinition {
@@ -119,5 +131,17 @@ impl StructDefinition {
                     .collect(),
             ),
         }
+    }
+}
+
+impl PartialEq<&StructDefinition> for StructDefinition {
+    fn eq(&self, other: &&StructDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<StructDefinition> for &StructDefinition {
+    fn eq(&self, other: &StructDefinition) -> bool {
+        *self == other
     }
 }

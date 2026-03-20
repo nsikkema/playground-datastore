@@ -23,7 +23,7 @@ impl StaticMap {
         let item_type = if let Some(first_item) = items.values().next() {
             let first_def = first_item.definition().clone();
             for item in items.values().skip(1) {
-                if item.definition() != &first_def {
+                if item.definition() != first_def {
                     return Err(StoreError::SchemaMismatch(format!(
                         "StaticMap items must have the same struct definition. Expected: {:?}, Found: {:?}",
                         first_def,

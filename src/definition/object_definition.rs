@@ -204,3 +204,15 @@ impl ObjectDefinition {
         }
     }
 }
+
+impl PartialEq<&ObjectDefinition> for ObjectDefinition {
+    fn eq(&self, other: &&ObjectDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<ObjectDefinition> for &ObjectDefinition {
+    fn eq(&self, other: &ObjectDefinition) -> bool {
+        *self == other
+    }
+}

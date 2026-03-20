@@ -52,6 +52,18 @@ impl PropertyDefinitionType {
     }
 }
 
+impl PartialEq<&PropertyDefinitionType> for PropertyDefinitionType {
+    fn eq(&self, other: &&PropertyDefinitionType) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<PropertyDefinitionType> for &PropertyDefinitionType {
+    fn eq(&self, other: &PropertyDefinitionType) -> bool {
+        *self == other
+    }
+}
+
 /// Definition for a property, including its type and metadata like description and visibility.
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub struct PropertyDefinition {
@@ -112,5 +124,17 @@ impl PropertyDefinition {
             item_type: Arc::new(self.item_type.launder(store)),
             gui_visibility: self.gui_visibility,
         }
+    }
+}
+
+impl PartialEq<&PropertyDefinition> for PropertyDefinition {
+    fn eq(&self, other: &&PropertyDefinition) -> bool {
+        self == *other
+    }
+}
+
+impl PartialEq<PropertyDefinition> for &PropertyDefinition {
+    fn eq(&self, other: &PropertyDefinition) -> bool {
+        *self == other
     }
 }
