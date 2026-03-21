@@ -58,12 +58,12 @@ impl ProxyStoreTrait for BasicProxy {
                     return Err(StoreError::ExpiredProxy);
                 }
             };
-            if proxy.definition() == self.definition() {
+            return if proxy.definition() == self.definition() {
                 self.data = proxy.data;
-                return Ok(());
+                Ok(())
             } else {
-                return Err(StoreError::ExpiredProxy);
-            }
+                Err(StoreError::ExpiredProxy)
+            };
         }
 
         if !self.has_changed() {

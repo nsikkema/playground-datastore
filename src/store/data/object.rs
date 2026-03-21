@@ -114,7 +114,7 @@ impl Object {
     pub(crate) fn update_from_static(
         &mut self,
         items: &std::collections::BTreeMap<StoreKey, crate::static_store::data::StaticProperty>,
-    ) -> Result<(), crate::StoreError> {
+    ) -> Result<(), StoreError> {
         for (key, static_property) in items {
             if let Some(item) = self.items.get_mut(key)
                 && item.matches_static(static_property)
@@ -170,18 +170,6 @@ impl CommonStoreTraitInternal for Object {
         unimplemented!()
     }
 
-    fn clear_shared_hash(&mut self) {
-        self.shared_hash.clear();
-    }
-
-    fn has_changed(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn is_valid(&self) -> bool {
-        self.shared_hash.get() != [0u8; 32]
-    }
-
     fn update_shared_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -204,6 +192,18 @@ impl CommonStoreTraitInternal for Object {
 
         let digest = h.finalize();
         self.shared_hash.set(*digest.as_bytes());
+    }
+
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear();
+    }
+
+    fn has_changed(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
     }
 }
 
