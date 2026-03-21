@@ -3,7 +3,7 @@ use crate::shareable_string::SharedStringStore;
 use crate::static_store::data::{StaticMap, StaticProperty, StaticStruct, StaticStructItem};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
 use crate::{StoreError, StoreKey};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// An item stored within a `Container`.
 #[derive(Debug, Clone)]
@@ -162,7 +162,7 @@ pub enum ContainerDefinition {
 #[derive(Debug, Clone)]
 pub(crate) struct Container {
     definition: ContainerDefinition,
-    items: HashMap<StoreKey, ContainerItem>,
+    items: FxHashMap<StoreKey, ContainerItem>,
     shared_hash: StoreHashContainer,
     locked: bool,
 }
@@ -170,7 +170,7 @@ pub(crate) struct Container {
 impl Container {
     /// Returns a new `Container` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item) in &self.items {
             let laundered_item = match item {
                 ContainerItem::Basic(b) => ContainerItem::Basic(b.launder(store)),
@@ -197,7 +197,7 @@ impl Container {
 
     /// Creates a new `Container` representing a struct.
     pub(crate) fn new_struct(definition: StructDefinition) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item_definition) in definition.iter() {
             match item_definition {
                 StructItemDefinition::Basic(basic) => {
@@ -223,7 +223,7 @@ impl Container {
     pub(crate) fn new_map(definition: MapDefinition) -> Self {
         let mut container = Container {
             definition: ContainerDefinition::Map(definition),
-            items: HashMap::new(),
+            items: FxHashMap::default(),
             shared_hash: StoreHashContainer::default(),
             locked: false,
         };
