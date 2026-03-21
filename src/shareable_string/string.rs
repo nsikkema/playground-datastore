@@ -222,11 +222,11 @@ mod tests {
     use super::*;
 
     #[test]
-    fn test_hashmap_lookup_by_str() {
-        use std::collections::HashMap;
+    fn test_fxhashmap_lookup_by_str() {
+        use rustc_hash::FxHashMap;
         let key = ShareableString::new("k");
 
-        let mut map: HashMap<ShareableString, usize> = HashMap::new();
+        let mut map: FxHashMap<ShareableString, usize> = FxHashMap::default();
         map.insert(key.clone(), 123);
 
         assert_eq!(map.get("k"), Some(&123));

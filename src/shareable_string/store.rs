@@ -1,13 +1,13 @@
 use crate::shareable_string::string::ShareableString;
 use parking_lot::RwLock;
-use std::collections::HashSet;
+use rustc_hash::FxHashSet;
 use std::sync::Arc;
 
 /// A store for interning `ShareableString`s.
 /// This store ensures that duplicate strings are only stored once in memory.
 #[derive(Debug, Clone)]
 pub struct SharedStringStore {
-    string_store: Arc<RwLock<HashSet<ShareableString>>>,
+    string_store: Arc<RwLock<FxHashSet<ShareableString>>>,
 }
 
 impl Default for SharedStringStore {
@@ -20,7 +20,7 @@ impl SharedStringStore {
     /// Creates a new, empty `SharedStringStore`.
     pub fn new() -> Self {
         Self {
-            string_store: Arc::new(RwLock::new(HashSet::new())),
+            string_store: Arc::new(RwLock::new(FxHashSet::default())),
         }
     }
 
@@ -231,15 +231,15 @@ mod tests {
     }
 
     #[test]
-    fn test_shared_string_hashset() {
-        use std::collections::HashSet;
+    fn test_shared_string_fxhashset() {
+        use rustc_hash::FxHashSet;
 
         let store = SharedStringStore::new();
         let a1 = store.get("same");
         let a2 = store.get("same");
         let b = store.get("different");
 
-        let mut set = HashSet::new();
+        let mut set = FxHashSet::default();
         assert!(set.insert(a1.clone()));
         assert!(!set.insert(a2.clone())); // equal => should not insert
         assert!(set.insert(b));

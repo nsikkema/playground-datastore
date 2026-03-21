@@ -6,13 +6,13 @@ use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
 use crate::{Segment, StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 /// The internal implementation of the data store.
 #[derive(Debug)]
 pub(crate) struct StoreInternal {
-    objects: RwLock<HashMap<StoreKey, Object>>,
+    objects: RwLock<FxHashMap<StoreKey, Object>>,
     pub(crate) string_store: SharedStringStore,
     blake3_hash: RwLock<[u8; 32]>,
 }
@@ -21,7 +21,7 @@ impl StoreInternal {
     /// Creates a new `StoreInternal`.
     fn new(string_store: SharedStringStore) -> Self {
         let store = StoreInternal {
-            objects: HashMap::new().into(),
+            objects: FxHashMap::default().into(),
             string_store,
             blake3_hash: [0u8; 32].into(),
         };
@@ -36,7 +36,7 @@ impl StoreInternal {
     }
 
     /// Updates the BLAKE3 hash based on the provided objects.
-    fn update_blake3_hash(&self, objects: &HashMap<StoreKey, Object>) {
+    fn update_blake3_hash(&self, objects: &FxHashMap<StoreKey, Object>) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -403,7 +403,7 @@ impl Store {
 
     pub fn new_from_static(static_store: &StaticStore) -> Self {
         let string_store = SharedStringStore::new();
-        let mut objects = HashMap::new();
+        let mut objects = FxHashMap::default();
         for (key, static_object) in static_store.objects() {
             let key = key.launder(&string_store);
             let object = Object::from(static_object);

@@ -5,20 +5,20 @@ use crate::store::{
     Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint,
 };
 use crate::{StoreError, StoreKey};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// A top-level object in the store.
 #[derive(Debug, Clone)]
 pub struct Object {
     definition: ObjectDefinition,
-    items: HashMap<StoreKey, ContainerItem>,
+    items: FxHashMap<StoreKey, ContainerItem>,
     shared_hash: StoreHashContainer,
 }
 
 impl Object {
     /// Creates a new `Object` from a definition.
     pub(crate) fn new(definition: &ObjectDefinition) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item_definition) in definition.iter() {
             match item_definition.item_type() {
                 PropertyDefinitionType::Basic(basic) => {
@@ -53,7 +53,7 @@ impl Object {
 
     /// Returns a new `Object` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item) in &self.items {
             let laundered_item = match item {
                 ContainerItem::Basic(b) => ContainerItem::Basic(b.launder(store)),

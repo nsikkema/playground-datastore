@@ -1,19 +1,19 @@
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use parking_lot::RwLock;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 #[derive(Debug, Clone)]
 pub struct SharedStringTranslationMap {
     store: SharedStringStore,
-    data: Arc<RwLock<HashMap<ShareableString, HashMap<ShareableString, ShareableString>>>>,
+    data: Arc<RwLock<FxHashMap<ShareableString, FxHashMap<ShareableString, ShareableString>>>>,
 }
 
 impl SharedStringTranslationMap {
     pub fn new(store: SharedStringStore) -> Self {
         SharedStringTranslationMap {
             store,
-            data: Arc::new(RwLock::new(HashMap::new())),
+            data: Arc::new(RwLock::new(FxHashMap::default())),
         }
     }
 
@@ -44,14 +44,14 @@ impl SharedStringTranslationMap {
             .insert(interned_lang, interned_translation);
     }
 
-    pub fn set_translation_key<K, K2, V2>(&self, key: K, data: &HashMap<K2, V2>)
+    pub fn set_translation_key<K, K2, V2>(&self, key: K, data: &FxHashMap<K2, V2>)
     where
         K: Into<ShareableString> + AsRef<str>,
         K2: Into<ShareableString> + AsRef<str> + Clone,
         V2: Into<ShareableString> + AsRef<str> + Clone,
     {
         let interned_key = self.store.launder(key);
-        let mut interned_data = HashMap::with_capacity(data.len());
+        let mut interned_data = FxHashMap::with_capacity_and_hasher(data.len(), Default::default());
         for (lang, translation) in data {
             let interned_lang = self.store.launder(lang.clone());
             let interned_translation = self.store.launder(translation.clone());
@@ -116,7 +116,7 @@ mod tests {
         let map = SharedStringTranslationMap::new(store);
 
         let key = "key2";
-        let mut data = HashMap::new();
+        let mut data = FxHashMap::default();
         data.insert("fr", "bonjour");
 
         map.set_translation_key(key, &data);
