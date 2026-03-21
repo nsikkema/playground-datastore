@@ -107,10 +107,7 @@ impl StoreInternal {
             return Err(StoreError::ObjectKeyAlreadyExists);
         }
 
-        writer.insert(
-            StoreKey::new(self.string_store.launder(&object_key.key)).unwrap(),
-            laundered_object,
-        );
+        writer.insert(object_key.launder(&self.string_store), laundered_object);
 
         self.update_blake3_hash(&writer);
 

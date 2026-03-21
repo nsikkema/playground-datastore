@@ -368,18 +368,6 @@ impl CommonStoreTraitInternal for Container {
         unimplemented!()
     }
 
-    fn clear_shared_hash(&mut self) {
-        self.shared_hash.clear();
-    }
-
-    fn has_changed(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn is_valid(&self) -> bool {
-        self.shared_hash.get() != [0u8; 32]
-    }
-
     fn update_shared_hash(&mut self) {
         let mut h = blake3::Hasher::new();
 
@@ -410,6 +398,18 @@ impl CommonStoreTraitInternal for Container {
 
         let digest = h.finalize();
         self.shared_hash.set(*digest.as_bytes());
+    }
+
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear();
+    }
+
+    fn has_changed(&self) -> bool {
+        unimplemented!()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
     }
 }
 
