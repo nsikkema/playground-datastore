@@ -32,3 +32,6 @@ unnameable_types = "warn"
 unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unsafe_code = "deny"
+
+[lints.rustdoc]
+broken_intra_doc_links = "deny"
