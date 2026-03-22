@@ -9,7 +9,7 @@ use rustc_hash::FxHashMap;
 
 /// A top-level object in the store.
 #[derive(Debug, Clone)]
-pub struct Object {
+pub(crate) struct Object {
     definition: ObjectDefinition,
     items: FxHashMap<StoreKey, ContainerItem>,
     shared_hash: StoreHashContainer,

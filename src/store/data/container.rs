@@ -150,7 +150,7 @@ impl TreePrint for ContainerItem {
 
 /// The definition for a `Container`.
 #[derive(Debug, Clone, PartialEq)]
-pub enum ContainerDefinition {
+pub(crate) enum ContainerDefinition {
     /// A struct definition.
     Struct(StructDefinition),
     /// A map definition.

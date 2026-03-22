@@ -26,5 +26,6 @@ unknown-or-malformed-diagnostic-attributes = { level = "deny", priority = -1 }
 unused = { level = "warn", priority = -2 }
 
 unnameable_types = "warn"
+unreachable_pub = "warn"
 unsafe_op_in_unsafe_fn = "warn"
 unsafe_code = "deny"

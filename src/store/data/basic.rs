@@ -5,7 +5,7 @@ use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
 
 /// Represents a basic data value in the store (String, Number, etc.).
 #[derive(Debug, Clone)]
-pub struct Basic {
+pub(crate) struct Basic {
     definition: BasicDefinition,
     value: ShareableString,
     current_hash: [u8; 32],
@@ -39,17 +39,17 @@ impl Basic {
     }
 
     /// Returns a reference to the basic definition.
-    pub fn definition(&self) -> &BasicDefinition {
+    pub(crate) fn definition(&self) -> &BasicDefinition {
         &self.definition
     }
 
     /// Returns the current value.
-    pub fn get(&self) -> ShareableString {
+    pub(crate) fn get(&self) -> ShareableString {
         self.value.clone()
     }
 
     /// Sets a new value and updates the hash.
-    pub fn set<S: Into<ShareableString>>(&mut self, value: S) {
+    pub(crate) fn set<S: Into<ShareableString>>(&mut self, value: S) {
         self.value = value.into();
         self.update_current_hash();
     }

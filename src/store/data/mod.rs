@@ -1,10 +1,10 @@
 mod basic;
 mod container;
-pub mod hash_container;
+pub(crate) mod hash_container;
 mod object;
 mod table;
 
-pub use basic::*;
-pub use container::*;
-pub use object::*;
-pub use table::*;
+pub(crate) use basic::*;
+pub(crate) use container::*;
+pub(crate) use object::*;
+pub(crate) use table::*;
