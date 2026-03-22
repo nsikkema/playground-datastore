@@ -54,7 +54,12 @@ impl StoreInternal {
 
         for key in keys {
             h.update(&key.current_blake3_hash());
-            h.update(&objects.get(key).unwrap().current_shared_hash());
+            h.update(
+                &objects
+                    .get(key)
+                    .expect("key was taken from objects, so it must exist")
+                    .current_shared_hash(),
+            );
         }
 
         let digest = h.finalize();
@@ -332,7 +337,9 @@ impl Store {
 
         if segments.len() == 1 {
             let mut object = self.internal.get_object(path.object_key())?;
-            let last_segment = segments.first().unwrap();
+            let last_segment = segments
+                .first()
+                .expect("segments.len() == 1, so first() must be Some");
             object.set_item(last_segment.key(), ContainerItem::Container(container))?;
 
             let mut writer = self.internal.objects.write();

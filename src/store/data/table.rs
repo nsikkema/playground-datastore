@@ -245,7 +245,8 @@ impl TreePrint for Table {
                     row_prefix,
                     Self::branch_char(&row_prefix, cell_last),
                     key,
-                    row.get(*key).unwrap()
+                    row.get(*key)
+                        .expect("key was taken from row keys, so it must exist")
                 )?;
             }
         }
