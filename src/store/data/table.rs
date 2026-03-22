@@ -7,7 +7,7 @@ use std::collections::BTreeMap;
 
 /// Represents a table of data in the store.
 #[derive(Debug, Clone)]
-pub struct Table {
+pub(crate) struct Table {
     definition: TableDefinition,
     rows: Vec<BTreeMap<StoreKey, ShareableString>>,
     current_hash: [u8; 32],
@@ -49,17 +49,17 @@ impl Table {
     }
 
     /// Returns a reference to the table definition.
-    pub fn definition(&self) -> &TableDefinition {
+    pub(crate) fn definition(&self) -> &TableDefinition {
         &self.definition
     }
 
     /// Returns the number of rows in the table.
-    pub fn row_count(&self) -> usize {
+    pub(crate) fn row_count(&self) -> usize {
         self.rows.len()
     }
 
     /// Returns the number of columns in the table.
-    pub fn column_count(&self) -> usize {
+    pub(crate) fn column_count(&self) -> usize {
         self.definition.count()
     }
 
@@ -94,7 +94,7 @@ impl Table {
     }
 
     /// Returns a reference to the row at the specified index.
-    pub fn row(&self, index: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
+    pub(crate) fn row(&self, index: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
         self.rows.get(index)
     }
 
@@ -146,6 +146,7 @@ impl Table {
             .collect()
     }
 
+    /// Updates this `Table` from a [`StaticTable`], replacing all rows and syncing the shared hash.
     pub(crate) fn update_from_static(&mut self, static_table: &StaticTable) {
         self.rows = static_table.rows().clone();
         self.shared_hash.set(static_table.hash());
@@ -244,7 +245,8 @@ impl TreePrint for Table {
                     row_prefix,
                     Self::branch_char(&row_prefix, cell_last),
                     key,
-                    row.get(*key).unwrap()
+                    row.get(*key)
+                        .expect("key was taken from row keys, so it must exist")
                 )?;
             }
         }

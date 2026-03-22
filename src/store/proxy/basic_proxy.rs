@@ -5,6 +5,7 @@ use crate::store::{Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait
 use crate::{StoreError, StorePath};
 
 /// A proxy for a basic data value in the store.
+#[derive(Debug)]
 pub struct BasicProxy {
     path: StorePath,
     store: Store,
@@ -58,12 +59,12 @@ impl ProxyStoreTrait for BasicProxy {
                     return Err(StoreError::ExpiredProxy);
                 }
             };
-            if proxy.definition() == self.definition() {
+            return if proxy.definition() == self.definition() {
                 self.data = proxy.data;
-                return Ok(());
+                Ok(())
             } else {
-                return Err(StoreError::ExpiredProxy);
-            }
+                Err(StoreError::ExpiredProxy)
+            };
         }
 
         if !self.has_changed() {

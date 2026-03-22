@@ -43,6 +43,7 @@ fn validate_key(key: &ShareableString) -> Result<(), StoreError> {
     }
 }
 
+/// A validated key that is known at compile-time.
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct ConstStoreKey(pub(crate) &'static str);
 
@@ -180,6 +181,9 @@ impl From<&ConstStoreKey> for StoreKey {
     }
 }
 
+/// A validated key.
+/// Keys must be non-empty and only contain lowercase a-z, digits 0-9, and underscores.
+/// The first character must be a-z.
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct StoreKey {
     pub(crate) key: ShareableString,
@@ -205,6 +209,8 @@ impl<'de> Deserialize<'de> for StoreKey {
 }
 
 impl StoreKey {
+    /// Creates a new `StoreKey` from a `ShareableString`.
+    /// Returns `StoreError::KeyEmpty` or `StoreError::KeyInvalidCharacter` if the key is invalid.
     pub fn new(key: ShareableString) -> Result<Self, StoreError> {
         validate_key(&key)?;
         Ok(StoreKey { key })
@@ -224,12 +230,14 @@ impl StoreKey {
         &self.key
     }
 
+    /// Returns a new `StoreKey` with its string interned through the given `SharedStringStore`.
     pub fn launder(&self, store: &SharedStringStore) -> StoreKey {
         let laundered_key = store.launder(self.key.clone());
 
         StoreKey::new_unsafe(laundered_key)
     }
 
+    /// Returns the BLAKE3 hash of the key.
     pub fn current_blake3_hash(&self) -> [u8; 32] {
         self.key.current_blake3_hash()
     }

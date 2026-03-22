@@ -6,6 +6,7 @@ use crate::store::{
 use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a container in the store.
+#[derive(Debug)]
 pub struct ContainerProxy {
     path: StorePath,
     store: Store,
@@ -80,14 +81,14 @@ impl ProxyStoreTrait for ContainerProxy {
                 Ok(p) => p,
                 Err(_) => return Err(StoreError::ExpiredProxy),
             };
-            if proxy.definition == self.definition {
+            return if proxy.definition == self.definition {
                 self.keys = proxy.keys;
                 self.object_hash = proxy.object_hash;
                 self.last_sync_hash = proxy.last_sync_hash;
-                return Ok(());
+                Ok(())
             } else {
-                return Err(StoreError::ExpiredProxy);
-            }
+                Err(StoreError::ExpiredProxy)
+            };
         }
         if !self.has_changed() {
             return Ok(());

@@ -5,13 +5,17 @@ use crate::store::{Store, TreePrint};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Represents a read-only, persistent store of objects.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStore {
+    /// The objects contained in the store.
     objects: BTreeMap<StoreKey, StaticObject>,
+    /// The pre-calculated BLAKE3 hash of the store's content.
     hash: [u8; 32],
 }
 
 impl StaticStore {
+    /// Creates a new `StaticStore` with the given objects.
     pub fn new(objects: BTreeMap<StoreKey, StaticObject>) -> Self {
         let objects = objects.into_iter().collect();
         let mut s = Self {
@@ -40,18 +44,22 @@ impl StaticStore {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the store's content.
     pub fn get_blake3_hash(&self) -> [u8; 32] {
         self.hash
     }
 
+    /// Returns a reference to the internal map of objects. Used for store conversions.
     pub(crate) fn objects(&self) -> &BTreeMap<StoreKey, StaticObject> {
         &self.objects
     }
 
+    /// Returns a reference to the static object with the specified key, if it exists.
     pub fn get<S: AsRef<str>>(&self, key: S) -> Option<&StaticObject> {
         self.objects.get(key.as_ref())
     }
 
+    /// Returns an iterator over the key-object pairs in the store.
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticObject)> {
         self.objects.iter()
     }

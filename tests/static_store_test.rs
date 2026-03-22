@@ -1,3 +1,8 @@
+//! Integration tests for the static store implementation.
+//!
+//! Validates conversion of a dynamic [`Store`] into a [`StaticStore`] and back,
+//! covering all container kinds (`StaticBasic`, `StaticStruct`, `StaticTable`)
+//! and ensuring that data fidelity is maintained across the round-trip.
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
 };
@@ -427,7 +432,7 @@ fn test_static_map_with_structs() {
 
     let static_struct = static_map.get("key1").unwrap();
     let basic_item = static_struct.get("s_prop").unwrap();
-    if let datastore::static_store::data::StaticStructItem::Basic(b) = basic_item {
+    if let StaticStructItem::Basic(b) = basic_item {
         assert_eq!(b.value().as_str(), "initial");
     } else {
         panic!("Expected basic item");
@@ -626,9 +631,7 @@ fn test_static_store_all_types() {
 
     // Struct
     let r_struct = obj.get("struct_prop").unwrap().get_struct().unwrap();
-    if let datastore::static_store::data::StaticStructItem::Basic(b) =
-        r_struct.get("field_1").unwrap()
-    {
+    if let StaticStructItem::Basic(b) = r_struct.get("field_1").unwrap() {
         assert_eq!(b.value().as_str(), "Struct Value");
     } else {
         panic!("Expected Basic for field_1");
@@ -637,9 +640,7 @@ fn test_static_store_all_types() {
     // Map
     let map = obj.get("map_prop").unwrap().get_map().unwrap();
     let entry_struct = map.get("entry_1").unwrap();
-    if let datastore::static_store::data::StaticStructItem::Basic(b) =
-        entry_struct.get("field_2").unwrap()
-    {
+    if let StaticStructItem::Basic(b) = entry_struct.get("field_2").unwrap() {
         assert_eq!(b.value().as_str(), "456");
     } else {
         panic!("Expected Basic for field_2 in map entry");

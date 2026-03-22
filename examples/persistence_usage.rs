@@ -1,3 +1,9 @@
+//! Demonstrates store persistence: serializing a [`Store`] to JSON and
+//! reloading it from disk.
+//!
+//! Populates a store with an object, saves it to a temporary JSON file via
+//! [`Store::to_json`], then reconstructs the store with [`Store::from_json`]
+//! and verifies that all values are intact.
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::store::Store;
 use datastore::store_key;

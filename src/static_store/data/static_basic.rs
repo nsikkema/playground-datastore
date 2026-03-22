@@ -13,6 +13,7 @@ pub struct StaticBasic {
 }
 
 impl StaticBasic {
+    /// Creates a new `StaticBasic` instance.
     pub fn new(definition: BasicDefinition, value: ShareableString) -> Self {
         let mut s = Self {
             definition,
@@ -36,14 +37,17 @@ impl StaticBasic {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the value as a `ShareableString`.
     pub fn value(&self) -> ShareableString {
         self.value.clone()
     }
 
+    /// Returns a reference to the basic definition.
     pub fn definition(&self) -> &BasicDefinition {
         &self.definition
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the value.
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }

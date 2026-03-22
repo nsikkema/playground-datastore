@@ -1,3 +1,8 @@
+//! Integration tests for store data recovery.
+//!
+//! Verifies that a [`Store`] can recover its full state – including nested
+//! objects and tables – after being serialized and deserialized, and that
+//! proxies obtained from the recovered store reflect the original values.
 use datastore::definition::{
     BasicDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
 };

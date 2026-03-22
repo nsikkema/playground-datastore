@@ -1,3 +1,8 @@
+//! Integration tests for the [`ObjectDefinitionBuilder`] API.
+//!
+//! Covers construction via the builder pattern, property inheritance, conflict
+//! detection, removal of properties, and the various `with_*` / `without`
+//! convenience methods.
 use datastore::definition::{
     BasicDefinition, ObjectDefinition, ObjectDefinitionBuilder, PropertyDefinition,
 };

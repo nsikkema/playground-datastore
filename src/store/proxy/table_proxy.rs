@@ -6,6 +6,7 @@ use crate::{StoreError, StoreKey, StorePath};
 use std::collections::BTreeMap;
 
 /// A proxy for a table in the store.
+#[derive(Debug)]
 pub struct TableProxy {
     path: StorePath,
     store: Store,
@@ -102,12 +103,12 @@ impl ProxyStoreTrait for TableProxy {
                 Ok(p) => p,
                 Err(_) => return Err(StoreError::ExpiredProxy),
             };
-            if proxy.definition() == self.definition() {
+            return if proxy.definition() == self.definition() {
                 self.data = proxy.data;
-                return Ok(());
+                Ok(())
             } else {
-                return Err(StoreError::ExpiredProxy);
-            }
+                Err(StoreError::ExpiredProxy)
+            };
         }
 
         if !self.has_changed() {

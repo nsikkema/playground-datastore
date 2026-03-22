@@ -138,7 +138,7 @@ impl StorePath {
         &self.object_key
     }
 
-    /// Returns the segments of the path.
+    /// Returns the segments of the path after the object key.
     pub fn segments(&self) -> &Vec<Segment> {
         &self.segments
     }
@@ -173,8 +173,7 @@ impl StorePath {
                     PathKind::Property,
                 ),
                 PathKind::Property => {
-                    // Ambiguous. Let's assume MapKey for now as it's common.
-                    // Or we could try to look ahead? No, let's just pick one that is valid.
+                    // Ambiguous: default to MapKey as Property -> MapKey is the most common transition.
                     (
                         Segment::MapKey(StoreKey::new_unsafe(part.into())),
                         PathKind::MapEntry,
@@ -185,8 +184,7 @@ impl StorePath {
                     PathKind::StructItem,
                 ),
                 PathKind::StructItem => {
-                    // Struct items can't have further segments in this schema?
-                    // Wait, let's check the transitions.
+                    // Struct items cannot have further child segments.
                     return Err(StoreError::InvalidPath);
                 }
             };
@@ -200,6 +198,7 @@ impl StorePath {
             kind,
         })
     }
+    /// Adds a property segment to the path and returns the new path.
     pub fn property(self, property_key: impl Into<StoreKey>) -> Self {
         self.push_property(property_key)
     }
@@ -244,6 +243,7 @@ impl StorePath {
         }
     }
 
+    /// Returns the last key in the path (either the object key or the last segment's key).
     pub fn get_last_key(&self) -> StoreKey {
         self.segments
             .last()
@@ -264,13 +264,21 @@ impl PartialEq<StorePath> for &StorePath {
     }
 }
 
-/// A macro to create a `StorePath` ergonomically.
+/// A macro to create a [`StorePath`] ergonomically.
+///
+/// The first argument is the object key. Each additional `/`-separated argument
+/// appends a [`Segment::Property`] segment. For paths that require [`Segment::MapKey`]
+/// or [`Segment::StructItem`] segments use [`StorePath::builder`] directly.
 ///
 /// # Examples
 ///
 /// ```
 /// use datastore::path;
-/// let p = path!("obj" / "prop" / "key");
+/// let p = path!("obj" / "prop" / "nested");
+/// assert_eq!(p.to_string(), "obj/prop/nested");
+///
+/// let p2 = path!("my_obj");
+/// assert_eq!(p2.to_string(), "my_obj");
 /// ```
 #[macro_export]
 macro_rules! path {

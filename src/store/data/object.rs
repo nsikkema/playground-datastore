@@ -5,20 +5,20 @@ use crate::store::{
     Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint,
 };
 use crate::{StoreError, StoreKey};
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 
 /// A top-level object in the store.
 #[derive(Debug, Clone)]
-pub struct Object {
+pub(crate) struct Object {
     definition: ObjectDefinition,
-    items: HashMap<StoreKey, ContainerItem>,
+    items: FxHashMap<StoreKey, ContainerItem>,
     shared_hash: StoreHashContainer,
 }
 
 impl Object {
     /// Creates a new `Object` from a definition.
     pub(crate) fn new(definition: &ObjectDefinition) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item_definition) in definition.iter() {
             match item_definition.item_type() {
                 PropertyDefinitionType::Basic(basic) => {
@@ -53,7 +53,7 @@ impl Object {
 
     /// Returns a new `Object` with strings laundered through the provided store.
     pub(crate) fn launder(&self, store: &SharedStringStore) -> Self {
-        let mut items = HashMap::new();
+        let mut items = FxHashMap::default();
         for (key, item) in &self.items {
             let laundered_item = match item {
                 ContainerItem::Basic(b) => ContainerItem::Basic(b.launder(store)),
@@ -111,10 +111,12 @@ impl Object {
         Ok(())
     }
 
+    /// Updates items in this object from the given static properties map.
+    /// Items with matching types are updated in-place; type-mismatched items are replaced.
     pub(crate) fn update_from_static(
         &mut self,
         items: &std::collections::BTreeMap<StoreKey, crate::static_store::data::StaticProperty>,
-    ) -> Result<(), crate::StoreError> {
+    ) -> Result<(), StoreError> {
         for (key, static_property) in items {
             if let Some(item) = self.items.get_mut(key)
                 && item.matches_static(static_property)
@@ -167,19 +169,8 @@ impl CommonStoreTraitInternal for Object {
     }
 
     fn update_current_hash(&mut self) {
+        // Object hash is computed directly via update_shared_hash; this path is never reached.
         unimplemented!()
-    }
-
-    fn clear_shared_hash(&mut self) {
-        self.shared_hash.clear();
-    }
-
-    fn has_changed(&self) -> bool {
-        unimplemented!()
-    }
-
-    fn is_valid(&self) -> bool {
-        self.shared_hash.get() != [0u8; 32]
     }
 
     fn update_shared_hash(&mut self) {
@@ -204,6 +195,19 @@ impl CommonStoreTraitInternal for Object {
 
         let digest = h.finalize();
         self.shared_hash.set(*digest.as_bytes());
+    }
+
+    fn clear_shared_hash(&mut self) {
+        self.shared_hash.clear();
+    }
+
+    fn has_changed(&self) -> bool {
+        // Change-tracking for objects is handled at the proxy level, not here.
+        unimplemented!()
+    }
+
+    fn is_valid(&self) -> bool {
+        self.shared_hash.get() != [0u8; 32]
     }
 }
 

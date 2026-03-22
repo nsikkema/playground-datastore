@@ -7,15 +7,15 @@ use std::fmt;
 pub(crate) trait CommonStoreTraitInternal {
     /// Returns the current shared BLAKE3 hash.
     fn current_shared_hash(&self) -> [u8; 32];
-    /// Returns a new BLAKE3 Hash for the object.
+    /// Recomputes the local BLAKE3 hash from the current data without syncing to shared storage.
     fn update_current_hash(&mut self);
-    /// Force sync shared hash.
+    /// Syncs the shared hash with the current local hash, making changes visible to other handles.
     fn update_shared_hash(&mut self);
     /// Clears the current shared hash.
     fn clear_shared_hash(&mut self);
-    /// Check if de-synced from the original store.
+    /// Returns `true` if the local data has changed since the last sync with the store.
     fn has_changed(&self) -> bool;
-    /// Check if the original store still exists.
+    /// Returns `true` if the shared storage backing this value still exists (non-zero hash).
     fn is_valid(&self) -> bool;
 }
 
@@ -76,8 +76,12 @@ pub trait TreePrint {
     }
 }
 
+/// Wrapper for displaying a `TreePrint` object.
+#[derive(Debug)]
 pub struct TreeDisplay<'a, T: TreePrint> {
+    /// The item to print.
     pub item: &'a T,
+    /// The label for the root of the tree.
     pub label: String,
 }
 

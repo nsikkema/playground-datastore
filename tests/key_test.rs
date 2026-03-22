@@ -1,3 +1,8 @@
+//! Integration tests for store keys and related key types.
+//!
+//! Verifies [`StoreKey`] construction and validation, the [`ConstStoreKey`]
+//! compile-time variant, the [`store_key!`] macro, and the interning behaviour
+//! of keys backed by [`ShareableString`].
 use datastore::key::{ConstStoreKey, StoreKey, is_valid_key};
 use datastore::shareable_string::ShareableString;
 use datastore::store_key;

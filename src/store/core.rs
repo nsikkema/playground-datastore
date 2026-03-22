@@ -6,14 +6,17 @@ use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
 use crate::{Segment, StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
-use std::collections::HashMap;
+use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
 /// The internal implementation of the data store.
 #[derive(Debug)]
 pub(crate) struct StoreInternal {
-    objects: RwLock<HashMap<StoreKey, Object>>,
+    /// The objects contained in the store.
+    objects: RwLock<FxHashMap<StoreKey, Object>>,
+    /// The string interning store used by the entire data store.
     pub(crate) string_store: SharedStringStore,
+    /// The pre-calculated BLAKE3 hash of the store's content.
     blake3_hash: RwLock<[u8; 32]>,
 }
 
@@ -21,7 +24,7 @@ impl StoreInternal {
     /// Creates a new `StoreInternal`.
     fn new(string_store: SharedStringStore) -> Self {
         let store = StoreInternal {
-            objects: HashMap::new().into(),
+            objects: FxHashMap::default().into(),
             string_store,
             blake3_hash: [0u8; 32].into(),
         };
@@ -36,7 +39,7 @@ impl StoreInternal {
     }
 
     /// Updates the BLAKE3 hash based on the provided objects.
-    fn update_blake3_hash(&self, objects: &HashMap<StoreKey, Object>) {
+    fn update_blake3_hash(&self, objects: &FxHashMap<StoreKey, Object>) {
         let mut h = blake3::Hasher::new();
 
         // Domain separation for this node/type.
@@ -51,7 +54,12 @@ impl StoreInternal {
 
         for key in keys {
             h.update(&key.current_blake3_hash());
-            h.update(&objects.get(key).unwrap().current_shared_hash());
+            h.update(
+                &objects
+                    .get(key)
+                    .expect("key was taken from objects, so it must exist")
+                    .current_shared_hash(),
+            );
         }
 
         let digest = h.finalize();
@@ -107,10 +115,7 @@ impl StoreInternal {
             return Err(StoreError::ObjectKeyAlreadyExists);
         }
 
-        writer.insert(
-            StoreKey::new(self.string_store.launder(&object_key.key)).unwrap(),
-            laundered_object,
-        );
+        writer.insert(object_key.launder(&self.string_store), laundered_object);
 
         self.update_blake3_hash(&writer);
 
@@ -134,6 +139,7 @@ impl StoreInternal {
 /// The main data store.
 #[derive(Debug, Clone)]
 pub struct Store {
+    /// The internal store implementation.
     internal: Arc<StoreInternal>,
 }
 
@@ -331,7 +337,9 @@ impl Store {
 
         if segments.len() == 1 {
             let mut object = self.internal.get_object(path.object_key())?;
-            let last_segment = segments.first().unwrap();
+            let last_segment = segments
+                .first()
+                .expect("segments.len() == 1, so first() must be Some");
             object.set_item(last_segment.key(), ContainerItem::Container(container))?;
 
             let mut writer = self.internal.objects.write();
@@ -369,6 +377,7 @@ impl Store {
         key.launder(&self.internal.string_store)
     }
 
+    /// Launders a [`ShareableString`] through the store's string store, deduplicating it.
     pub fn launder_string(&self, string: ShareableString) -> ShareableString {
         self.internal.string_store.launder(string)
     }
@@ -388,25 +397,29 @@ impl Store {
         self.object(object_key)
     }
 
+    /// Converts this store into a [`StaticStore`] representation.
     pub fn to_static(&self) -> Result<StaticStore, StoreError> {
         StaticStore::try_from(self)
     }
 
+    /// Serializes this store to a JSON string via [`StaticStore`].
     pub fn to_json(&self) -> Result<String, StoreError> {
         let static_store = self.to_static()?;
         serde_json::to_string(&static_store)
             .map_err(|e| StoreError::SerializationError(e.to_string()))
     }
 
+    /// Deserializes a store from a JSON string.
     pub fn from_json(json: &str) -> Result<Self, StoreError> {
         let static_store: StaticStore = serde_json::from_str(json)
             .map_err(|e| StoreError::SerializationError(e.to_string()))?;
         Ok(Self::new_from_static(&static_store))
     }
 
+    /// Creates a new [`Store`] populated from the given [`StaticStore`].
     pub fn new_from_static(static_store: &StaticStore) -> Self {
         let string_store = SharedStringStore::new();
-        let mut objects = HashMap::new();
+        let mut objects = FxHashMap::default();
         for (key, static_object) in static_store.objects() {
             let key = key.launder(&string_store);
             let object = Object::from(static_object);
@@ -425,6 +438,10 @@ impl Store {
         }
     }
 
+    /// Synchronizes this store's objects from a [`StaticStore`].
+    ///
+    /// When `delete_missing` is `true`, objects not present in the static store are removed.
+    /// Objects whose definitions match are updated in-place; others are replaced entirely.
     fn update_from_static_internal(
         &self,
         static_store: &StaticStore,
@@ -459,16 +476,22 @@ impl Store {
         Ok(())
     }
 
+    /// Synchronizes this store from a [`StaticStore`], removing objects not present in it.
     pub fn sync_from_static(&self, static_store: &StaticStore) -> Result<(), StoreError> {
         self.update_from_static_internal(static_store, true)
     }
 
+    /// Merges objects from a [`StaticStore`] into this store, keeping existing objects that are not in the source.
     pub fn merge_from_static(&self, static_store: &StaticStore) -> Result<(), StoreError> {
         self.update_from_static_internal(static_store, false)
     }
 }
 
 /// Splits a path into its parent path and the last segment.
+///
+/// # Errors
+///
+/// Returns [`StoreError::InvalidPath`] if the path has no segments (i.e. it points only to an object).
 fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
     let mut segments = path.segments().clone();
     let last_segment = segments.pop().ok_or(StoreError::InvalidPath)?;
