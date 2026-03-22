@@ -15,6 +15,7 @@ pub struct StaticTable {
 }
 
 impl StaticTable {
+    /// Creates a new `StaticTable` with a definition and rows.
     pub fn new(
         definition: TableDefinition,
         rows: Vec<BTreeMap<StoreKey, ShareableString>>,
@@ -48,6 +49,7 @@ impl StaticTable {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the value of a cell by row and column index.
     pub fn cell_by_index(&self, row: usize, column: usize) -> Option<&ShareableString> {
         self.rows
             .get(row)?
@@ -56,6 +58,7 @@ impl StaticTable {
             .map(|(_, value)| value)
     }
 
+    /// Returns the value of a cell by row index and column name.
     pub fn cell_by_name<S: Into<ShareableString>>(
         &self,
         row: usize,
@@ -64,18 +67,22 @@ impl StaticTable {
         self.rows.get(row)?.get(&column_name.into())
     }
 
+    /// Returns the row at the specified index.
     pub fn row(&self, row: usize) -> Option<&BTreeMap<StoreKey, ShareableString>> {
         self.rows.get(row)
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the table.
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }
 
+    /// Returns a reference to all rows in the table.
     pub fn rows(&self) -> &Vec<BTreeMap<StoreKey, ShareableString>> {
         &self.rows
     }
 
+    /// Returns a reference to the table definition.
     pub fn definition(&self) -> &TableDefinition {
         &self.definition
     }

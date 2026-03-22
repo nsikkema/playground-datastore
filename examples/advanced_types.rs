@@ -1,3 +1,9 @@
+//! Demonstrates advanced definition types: [`StructDefinition`], [`MapDefinition`],
+//! and [`TableDefinition`].
+//!
+//! Shows how to define reusable struct types, key-value maps, and row-based
+//! tables, then create and populate them in a [`Store`] using proxy-based access
+//! and [`StorePath`] navigation.
 use datastore::StorePath;
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,

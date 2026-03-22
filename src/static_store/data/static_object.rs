@@ -8,14 +8,19 @@ use crate::store::data::Object;
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Represents a set of properties for an object in the static store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticObject {
+    /// The definition of the object.
     definition: ObjectDefinition,
+    /// The properties (items) of the object.
     items: BTreeMap<StoreKey, StaticProperty>,
+    /// The pre-calculated BLAKE3 hash of the object's content.
     hash: [u8; 32],
 }
 
 impl StaticObject {
+    /// Creates a new `StaticObject` with a description and a list of items.
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticProperty>,
@@ -51,6 +56,7 @@ impl StaticObject {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the object.
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }
@@ -59,14 +65,17 @@ impl StaticObject {
         &self.items
     }
 
+    /// Returns a reference to the property with the specified key, if it exists.
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticProperty> {
         self.items.get(&key.into())
     }
 
+    /// Returns an iterator over the key-property pairs in the object.
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticProperty)> {
         self.items.iter()
     }
 
+    /// Returns a reference to the object definition.
     pub fn definition(&self) -> &ObjectDefinition {
         &self.definition
     }

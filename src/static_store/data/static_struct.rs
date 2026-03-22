@@ -8,13 +8,17 @@ use crate::store::data::{Container, ContainerDefinition, ContainerItem};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Represents an item in a static struct.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub enum StaticStructItem {
+    /// A basic value.
     Basic(StaticBasic),
+    /// A table value.
     Table(StaticTable),
 }
 
 impl StaticStructItem {
+    /// Returns the basic value if this item is a basic value.
     pub fn get_basic(&self) -> Option<&StaticBasic> {
         match self {
             StaticStructItem::Basic(basic) => Some(basic),
@@ -22,6 +26,7 @@ impl StaticStructItem {
         }
     }
 
+    /// Returns the table value if this item is a table value.
     pub fn get_table(&self) -> Option<&StaticTable> {
         match self {
             StaticStructItem::Table(table) => Some(table),
@@ -29,6 +34,7 @@ impl StaticStructItem {
         }
     }
 
+    /// Returns the struct item definition.
     pub fn definition(&self) -> StructItemDefinition {
         match self {
             StaticStructItem::Basic(basic) => {
@@ -40,6 +46,7 @@ impl StaticStructItem {
         }
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the item.
     pub fn hash(&self) -> [u8; 32] {
         match self {
             StaticStructItem::Basic(basic) => basic.hash(),
@@ -63,14 +70,19 @@ impl TreePrint for StaticStructItem {
     }
 }
 
+/// Represents a structured value in the static store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticStruct {
+    /// The definition of the struct.
     definition: StructDefinition,
+    /// The items in the struct.
     items: BTreeMap<StoreKey, StaticStructItem>,
+    /// The pre-calculated BLAKE3 hash of the struct's content.
     hash: [u8; 32],
 }
 
 impl StaticStruct {
+    /// Creates a new `StaticStruct` with a description and items.
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticStructItem>,
@@ -106,6 +118,7 @@ impl StaticStruct {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the struct.
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }
@@ -114,14 +127,17 @@ impl StaticStruct {
         &self.items
     }
 
+    /// Returns a reference to the item with the specified key, if it exists.
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticStructItem> {
         self.items.get(&key.into())
     }
 
+    /// Returns an iterator over the key-item pairs in the struct.
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticStructItem)> {
         self.items.iter()
     }
 
+    /// Returns a reference to the struct definition.
     pub fn definition(&self) -> &StructDefinition {
         &self.definition
     }

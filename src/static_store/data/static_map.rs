@@ -8,14 +8,19 @@ use crate::store::data::{Container, ContainerDefinition};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 
+/// Represents a map of properties in the static store.
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct StaticMap {
+    /// The definition of the map.
     definition: MapDefinition,
+    /// The items in the map.
     items: BTreeMap<StoreKey, StaticStruct>,
+    /// The pre-calculated BLAKE3 hash of the map's content.
     hash: [u8; 32],
 }
 
 impl StaticMap {
+    /// Creates a new `StaticMap` with a description and items.
     pub fn new<S: Into<ShareableString>>(
         description: S,
         items: BTreeMap<StoreKey, StaticStruct>,
@@ -65,6 +70,7 @@ impl StaticMap {
         self.hash = *digest.as_bytes();
     }
 
+    /// Returns the pre-calculated BLAKE3 hash of the map.
     pub fn hash(&self) -> [u8; 32] {
         self.hash
     }
@@ -73,14 +79,17 @@ impl StaticMap {
         &self.items
     }
 
+    /// Returns a reference to the item with the specified key, if it exists.
     pub fn get<S: Into<ShareableString>>(&self, key: S) -> Option<&StaticStruct> {
         self.items.get(&key.into())
     }
 
+    /// Returns an iterator over the key-item pairs in the map.
     pub fn iter(&self) -> impl Iterator<Item = (&StoreKey, &StaticStruct)> {
         self.items.iter()
     }
 
+    /// Returns a reference to the map definition.
     pub fn definition(&self) -> &MapDefinition {
         &self.definition
     }

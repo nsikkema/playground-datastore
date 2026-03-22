@@ -54,6 +54,7 @@ impl Basic {
         self.update_current_hash();
     }
 
+    /// Updates this `Basic` value from a [`StaticBasic`], replacing the stored value and hash.
     pub(crate) fn update_from_static(&mut self, static_basic: &StaticBasic) {
         self.value = static_basic.value().clone();
         self.current_hash = static_basic.hash();

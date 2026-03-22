@@ -1,3 +1,9 @@
+//! Demonstrates the static store: converting a dynamic [`Store`] into a
+//! read-optimized [`StaticStore`].
+//!
+//! Builds a store containing objects with structs, maps, and tables, converts
+//! it to a static representation, and shows how to traverse the static data
+//! hierarchy for fast, allocation-free reads.
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
     TableDefinition,

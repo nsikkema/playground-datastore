@@ -48,11 +48,16 @@
 //! assert_eq!(name_proxy_direct.value().as_str(), "Alice");
 //! ```
 
+/// Data structure definitions.
 pub mod definition;
+/// Keys and associated traits.
 pub mod key;
 mod path;
+/// Shareable strings for efficient string handling.
 pub mod shareable_string;
+/// Static store implementation for efficient persistence and access.
 pub mod static_store;
+/// Dynamic store implementation with proxy-based access.
 pub mod store;
 
 pub use crate::key::{ConstStoreKey, StoreKey};

@@ -17,6 +17,8 @@ pub(crate) enum ContainerItem {
 }
 
 impl ContainerItem {
+    /// Returns `true` if this item's type and definition match the given [`StaticProperty`].
+    /// Used to determine whether an in-place update is safe before calling [`update_from_static`].
     pub(crate) fn matches_static(&self, static_property: &StaticProperty) -> bool {
         match (self, static_property) {
             (ContainerItem::Basic(b), StaticProperty::Basic(sb)) => {
@@ -35,6 +37,12 @@ impl ContainerItem {
         }
     }
 
+    /// Updates this item in-place from the given [`StaticProperty`].
+    ///
+    /// # Errors
+    ///
+    /// Returns [`StoreError::SchemaMismatch`] if the item type does not match the static property.
+    /// Call [`matches_static`] first to verify compatibility.
     pub(crate) fn update_from_static(
         &mut self,
         static_property: &StaticProperty,
@@ -100,6 +108,7 @@ impl CommonStoreTraitInternal for ContainerItem {
     }
 
     fn update_current_hash(&mut self) {
+        // ContainerItem delegates hash computation to its inner type; this path is never reached.
         unimplemented!()
     }
 
@@ -128,6 +137,7 @@ impl CommonStoreTraitInternal for ContainerItem {
     }
 
     fn is_valid(&self) -> bool {
+        // Validity is checked on the containing Object or Container, not on individual items.
         unimplemented!()
     }
 }
@@ -281,6 +291,8 @@ impl Container {
         }
     }
 
+    /// Updates items in this struct container from the given static items map.
+    /// Existing items with matching types are updated in-place; mismatched items are replaced.
     pub(crate) fn update_from_static_struct(
         &mut self,
         items: &std::collections::BTreeMap<StoreKey, StaticStructItem>,
@@ -307,6 +319,8 @@ impl Container {
         self.update_shared_hash();
     }
 
+    /// Updates entries in this map container from the given static structs map.
+    /// Existing entries are updated in-place where possible; new entries are inserted.
     pub(crate) fn update_from_static_map(
         &mut self,
         items: &std::collections::BTreeMap<StoreKey, StaticStruct>,
@@ -365,6 +379,7 @@ impl CommonStoreTraitInternal for Container {
     }
 
     fn update_current_hash(&mut self) {
+        // Container hash is computed directly via update_shared_hash; this path is never reached.
         unimplemented!()
     }
 
@@ -405,6 +420,7 @@ impl CommonStoreTraitInternal for Container {
     }
 
     fn has_changed(&self) -> bool {
+        // Change-tracking for containers is handled at the proxy level, not here.
         unimplemented!()
     }
 

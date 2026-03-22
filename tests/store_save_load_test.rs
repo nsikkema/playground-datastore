@@ -1,3 +1,9 @@
+//! Integration tests for store serialization and deserialization (save / load).
+//!
+//! Verifies that a [`Store`] can be serialized to JSON and reloaded without
+//! data loss, covering basic properties, nested structs, maps, tables, choice
+//! definitions, and file references.  Also checks that the BLAKE3 content hash
+//! is stable across a round-trip.
 use datastore::definition::{
     BasicDefinition, ChoiceDefinition, FileDefinition, MapDefinition, ObjectDefinition,
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,

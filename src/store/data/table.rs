@@ -146,6 +146,7 @@ impl Table {
             .collect()
     }
 
+    /// Updates this `Table` from a [`StaticTable`], replacing all rows and syncing the shared hash.
     pub(crate) fn update_from_static(&mut self, static_table: &StaticTable) {
         self.rows = static_table.rows().clone();
         self.shared_hash.set(static_table.hash());

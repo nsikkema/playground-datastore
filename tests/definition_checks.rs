@@ -1,3 +1,9 @@
+//! Integration tests that verify the correctness of definition validation logic.
+//!
+//! Tests span all definition kinds – [`BasicDefinition`], [`ObjectDefinition`],
+//! [`StructDefinition`], [`MapDefinition`], [`TableDefinition`],
+//! [`ChoiceDefinition`], and [`FileDefinition`] – checking their constructors,
+//! accessors, and serialisation round-trips.
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,

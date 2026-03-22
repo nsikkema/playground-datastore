@@ -1,3 +1,10 @@
+//! Comprehensive integration tests that exercise every definition type together.
+//!
+//! These tests complement the focused checks in `definition_checks` by building
+//! realistic composite definitions and verifying the interaction between
+//! [`BasicDefinition`], [`ObjectDefinition`], [`StructDefinition`],
+//! [`MapDefinition`], [`TableDefinition`], [`ChoiceDefinition`], and
+//! [`FileDefinition`].
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, ChoiceDefinition, FileDefinition, MapDefinition,
     ObjectDefinition, PropertyDefinition, PropertyDefinitionType, StructDefinition,

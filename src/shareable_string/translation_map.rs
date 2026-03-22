@@ -3,6 +3,7 @@ use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
 
+/// A thread-safe map for storing translations of `ShareableString`s.
 #[derive(Debug, Clone)]
 pub struct SharedStringTranslationMap {
     store: SharedStringStore,
@@ -10,6 +11,7 @@ pub struct SharedStringTranslationMap {
 }
 
 impl SharedStringTranslationMap {
+    /// Creates a new `SharedStringTranslationMap` with the given `SharedStringStore`.
     pub fn new(store: SharedStringStore) -> Self {
         SharedStringTranslationMap {
             store,
@@ -17,6 +19,7 @@ impl SharedStringTranslationMap {
         }
     }
 
+    /// Returns the translation for the given key and language, if it exists.
     pub fn get_translation<K, L>(&self, key: K, language: L) -> Option<ShareableString>
     where
         K: AsRef<str>,
@@ -28,6 +31,9 @@ impl SharedStringTranslationMap {
             .and_then(|translations| translations.get(language.as_ref()).cloned())
     }
 
+    /// Sets the translation for the given key and language.
+    ///
+    /// The key, language, and translation are automatically laundered into the map's store.
     pub fn set_translation<K, L, T>(&self, key: K, language: L, translation: T)
     where
         K: Into<ShareableString> + AsRef<str>,
@@ -44,6 +50,9 @@ impl SharedStringTranslationMap {
             .insert(interned_lang, interned_translation);
     }
 
+    /// Sets all translations for a given key.
+    ///
+    /// The key and all languages/translations in the data map are automatically laundered into the map's store.
     pub fn set_translation_key<K, K2, V2>(&self, key: K, data: &FxHashMap<K2, V2>)
     where
         K: Into<ShareableString> + AsRef<str>,

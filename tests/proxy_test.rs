@@ -1,3 +1,8 @@
+//! Integration tests for the proxy-based store access layer.
+//!
+//! Exercises reading and mutating store data through [`BasicProxy`],
+//! [`ObjectProxy`], [`StructProxy`], and [`TableProxy`], as well as proxy
+//! validity, change-tracking (`has_changed` / `pull`), and push semantics.
 use datastore::definition::{
     BasicDefinition, ObjectDefinition, PropertyDefinition, StructDefinition, StructItemDefinition,
     TableDefinition,

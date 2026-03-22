@@ -1,3 +1,8 @@
+//! Integration tests for adding and copying objects between stores.
+//!
+//! Verifies that [`Store::copy_object`] correctly duplicates an object from one
+//! store into another, that the copied data matches the source, and that
+//! later mutations in either store do not affect the other.
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store};
@@ -24,7 +29,7 @@ fn test_add_object_from_another_store() {
     basic1.set_value("Hello from Store 1");
     basic1.push().unwrap();
 
-    // Add object from store1 to store2
+    // Add an object from store1 to store2
     let obj_key2: datastore::StoreKey = store_key!("object2").into();
     let proxy2 = store2
         .copy_object(obj_key2.clone(), &store1, obj_key1.clone())

@@ -111,6 +111,8 @@ impl Object {
         Ok(())
     }
 
+    /// Updates items in this object from the given static properties map.
+    /// Items with matching types are updated in-place; type-mismatched items are replaced.
     pub(crate) fn update_from_static(
         &mut self,
         items: &std::collections::BTreeMap<StoreKey, crate::static_store::data::StaticProperty>,
@@ -167,6 +169,7 @@ impl CommonStoreTraitInternal for Object {
     }
 
     fn update_current_hash(&mut self) {
+        // Object hash is computed directly via update_shared_hash; this path is never reached.
         unimplemented!()
     }
 
@@ -199,6 +202,7 @@ impl CommonStoreTraitInternal for Object {
     }
 
     fn has_changed(&self) -> bool {
+        // Change-tracking for objects is handled at the proxy level, not here.
         unimplemented!()
     }
 

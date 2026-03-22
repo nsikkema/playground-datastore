@@ -1,3 +1,8 @@
+//! Integration tests for the [`StoreError`] type.
+//!
+//! Covers the `Display`, `Debug`, `Clone`, and `PartialEq` implementations for
+//! every [`StoreError`] variant, ensuring that error messages are formatted
+//! correctly and that equality comparisons behave as expected.
 use datastore::StoreError;
 use datastore::shareable_string::ShareableString;
 

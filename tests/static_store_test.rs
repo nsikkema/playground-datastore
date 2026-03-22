@@ -1,3 +1,8 @@
+//! Integration tests for the static store implementation.
+//!
+//! Validates conversion of a dynamic [`Store`] into a [`StaticStore`] and back,
+//! covering all container kinds (`StaticBasic`, `StaticStruct`, `StaticTable`)
+//! and ensuring that data fidelity is maintained across the round-trip.
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
 };
