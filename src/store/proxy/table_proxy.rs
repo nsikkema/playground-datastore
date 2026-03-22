@@ -6,6 +6,7 @@ use crate::{StoreError, StoreKey, StorePath};
 use std::collections::BTreeMap;
 
 /// A proxy for a table in the store.
+#[derive(Debug)]
 pub struct TableProxy {
     path: StorePath,
     store: Store,

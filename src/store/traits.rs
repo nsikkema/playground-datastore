@@ -76,6 +76,7 @@ pub trait TreePrint {
     }
 }
 
+#[derive(Debug)]
 pub struct TreeDisplay<'a, T: TreePrint> {
     pub item: &'a T,
     pub label: String,

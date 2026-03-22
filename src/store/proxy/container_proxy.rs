@@ -6,6 +6,7 @@ use crate::store::{
 use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a container in the store.
+#[derive(Debug)]
 pub struct ContainerProxy {
     path: StorePath,
     store: Store,

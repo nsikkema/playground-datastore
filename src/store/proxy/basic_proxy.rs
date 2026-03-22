@@ -5,6 +5,7 @@ use crate::store::{Basic, CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait
 use crate::{StoreError, StorePath};
 
 /// A proxy for a basic data value in the store.
+#[derive(Debug)]
 pub struct BasicProxy {
     path: StorePath,
     store: Store,
