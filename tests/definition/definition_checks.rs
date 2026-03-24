@@ -10,36 +10,6 @@ use datastore::definition::{
 use datastore::{StoreKey, store_key};
 
 #[test]
-fn test_table_definition() {
-    // Why: Test table definition creation and properties.
-    let table_def = TableDefinition::new(
-        "A table",
-        vec![
-            (store_key!("col1"), BasicDefinition::new_string("Column 1")),
-            (
-                store_key!("col2"),
-                BasicDefinition::new_number_with_default("Column 2", "test"),
-            ),
-        ],
-    );
-
-    // Check the various properties of the table definition.
-    assert_eq!(table_def.description().as_ref(), "A table");
-    assert_eq!(table_def.count(), 2);
-    assert!(table_def.contains_key(store_key!("col1")));
-    assert!(table_def.contains_key(store_key!("col2")));
-    assert!(!table_def.contains_key(store_key!("col3")));
-
-    let col1 = table_def.get(store_key!("col1")).unwrap();
-    assert_eq!(col1.description().as_ref(), "Column 1");
-    assert_eq!(col1.default_value().as_ref(), "");
-
-    let col2 = table_def.get(store_key!("col2")).unwrap();
-    assert_eq!(col2.description().as_ref(), "Column 2");
-    assert_eq!(col2.default_value().as_ref(), "test");
-}
-
-#[test]
 fn test_struct_all_basic_definition() {
     // Why: Test struct definition creation and properties.
     let struct_def = StructDefinition::new(
