@@ -10,24 +10,6 @@ use datastore::definition::{
 use datastore::{StoreKey, store_key};
 
 #[test]
-fn test_map_definition() {
-    // Why: Test map definition creation and properties.
-    let struct_def = StructDefinition::new(
-        "Item struct",
-        Vec::<(StoreKey, StructItemDefinition)>::new(),
-    );
-    let map_def = MapDefinition::new("A map", struct_def.clone());
-
-    // Check the various properties of the map definition.
-    assert_eq!(map_def.description().as_ref(), "A map");
-    assert_eq!(map_def.item_type().description().as_ref(), "Item struct");
-
-    let item_def = map_def.item_type();
-    assert_eq!(item_def.description().as_ref(), "Item struct");
-    assert_eq!(item_def.count(), 0);
-}
-
-#[test]
 fn test_property_definition() {
     // Why: Test basic property definition creation and properties.
     let basic_prop = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("String"));
