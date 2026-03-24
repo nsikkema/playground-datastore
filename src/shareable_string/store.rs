@@ -83,12 +83,20 @@ impl SharedStringStore {
             return existing.clone();
         }
 
+        // In tests, fire a hook here to allow deterministic simulation of another writer
+        // inserting the same key between our read-lock check and the write-lock acquisition.
+        #[cfg(test)]
+        AFTER_READ_HOOK.with(|h| {
+            if let Some(f) = h.borrow().as_ref() {
+                f();
+            }
+        });
+
         // Long path for laundering, check if it exists in the store with a write lock, if not, insert the string into the store.
         let mut store = self.string_store.write();
 
         // We are checking if someone acquired the write lock and inserted a new key after our read.
         // There is a slim chance of this happening, but it's possible.
-        // Note: This may not be hit during coverage.
         if let Some(existing) = store.get(key.as_ref()) {
             return existing.clone();
         }
@@ -97,6 +105,14 @@ impl SharedStringStore {
         store.insert(key.clone());
         key
     }
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Fires between the read-lock check and the write-lock acquisition inside `launder`.
+    /// Set this in a test to deterministically exercise the double-check branch.
+    static AFTER_READ_HOOK: std::cell::RefCell<Option<Box<dyn Fn()>>> =
+        const { std::cell::RefCell::new(None) };
 }
 
 #[cfg(test)]
@@ -367,6 +383,35 @@ mod tests {
         store.get("present");
         assert!(store.contains("present"));
         assert!(!store.contains("absent"));
+    }
+
+    /// Deterministically exercises the double-check branch inside `launder`:
+    /// the `if let Some(existing) = store.get(key.as_ref())` guard that runs
+    /// after the write lock is acquired.
+    ///
+    /// The hook fires between the read-lock check and the write-lock acquisition,
+    /// simulating a concurrent writer inserting the same key in that window.
+    #[test]
+    fn test_launder_double_check_path() {
+        let store = SharedStringStore::new();
+        let store_clone = store.clone();
+
+        AFTER_READ_HOOK.with(|h| {
+            *h.borrow_mut() = Some(Box::new(move || {
+                // Simulate a concurrent writer inserting the key after our read-lock check
+                // failed but before we acquire the write lock.
+                store_clone.add(&ShareableString::new("race"));
+            }));
+        });
+
+        let result = store.launder("race");
+
+        // Clean up the hook before any assertion that might panic.
+        AFTER_READ_HOOK.with(|h| *h.borrow_mut() = None);
+
+        // The double-check branch must have returned the already-inserted instance.
+        assert_eq!(result.as_ref(), "race");
+        assert_eq!(store.len(), 1);
     }
 
     #[test]
