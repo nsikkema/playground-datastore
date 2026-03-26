@@ -274,6 +274,14 @@ mod tests {
         assert_eq!("hello", s);
         assert_ne!("world", s);
 
+        // ShareableString with str
+        assert_eq!(s, *"hello");
+        assert_ne!(s, *"world");
+
+        // str with ShareableString
+        assert_eq!(*"hello", s);
+        assert_ne!(*"world", s);
+
         // ShareableString with String
         assert_eq!(s, String::from("hello"));
         assert_ne!(s, String::from("world"));
@@ -302,6 +310,18 @@ mod tests {
         assert!("z" > s);
         assert!("m" <= s);
         assert!("m" >= s);
+
+        // ShareableString with str
+        assert!(s > *"a");
+        assert!(s < *"z");
+        assert!(s <= *"m");
+        assert!(s >= *"m");
+
+        // str with ShareableString
+        assert!(*"a" < s);
+        assert!(*"z" > s);
+        assert!(*"m" <= s);
+        assert!(*"m" >= s);
 
         // ShareableString with String
         assert!(s > String::from("a"));
@@ -342,6 +362,25 @@ mod tests {
         let deserialized: ShareableString = serde_json::from_str(&serialized).unwrap();
         assert_eq!(deserialized, s);
         assert_eq!(deserialized.current_blake3_hash(), s.current_blake3_hash());
+    }
+
+    #[test]
+    fn test_deserialize_error_propagated_from_string() {
+        // Each of these passes a non-string JSON Value directly into ShareableString's
+        // Deserialize impl, causing `String::deserialize(deserializer)?` at line 191
+        // to return an error that is propagated via `?`.
+        let non_strings: &[serde_json::Value] = &[
+            serde_json::json!(42),
+            serde_json::json!(3.14),
+            serde_json::json!(true),
+            serde_json::json!(null),
+            serde_json::json!(["a", "b"]),
+            serde_json::json!({"key": "value"}),
+        ];
+        for value in non_strings {
+            let result = serde_json::from_value::<ShareableString>(value.clone());
+            assert!(result.is_err(), "expected error for value: {value}");
+        }
     }
 
     #[test]
