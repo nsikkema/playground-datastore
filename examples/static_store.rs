@@ -95,8 +95,7 @@ fn main() {
                 .clone()
                 .to_builder()
                 .struct_item(store_key!("field_1"))
-                .build()
-                .unwrap(),
+                .build(),
         )
         .unwrap();
     s_field_1.set_value("Struct Value");
@@ -109,8 +108,7 @@ fn main() {
                 .clone()
                 .to_builder()
                 .struct_item(store_key!("field_2"))
-                .build()
-                .unwrap(),
+                .build(),
         )
         .unwrap();
     s_field_2.set_value("123");
@@ -129,8 +127,7 @@ fn main() {
                 .clone()
                 .to_builder()
                 .struct_item(store_key!("field_1"))
-                .build()
-                .unwrap(),
+                .build(),
         )
         .unwrap();
     m_field_1.set_value("Map Entry Value");
@@ -143,8 +140,7 @@ fn main() {
                 .clone()
                 .to_builder()
                 .struct_item(store_key!("field_2"))
-                .build()
-                .unwrap(),
+                .build(),
         )
         .unwrap();
     m_field_2.set_value("456");

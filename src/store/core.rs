@@ -4,7 +4,7 @@ use crate::static_store::StaticStore;
 use crate::store::data::{Basic, Container, ContainerItem, Object, Table};
 use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
-use crate::{Segment, StoreError, StoreKey, StorePath};
+use crate::{StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -221,19 +221,15 @@ impl Store {
         let mut current_container: Option<Container> = None;
 
         for segment in store_path.segments() {
-            match segment {
-                Segment::Property(key) | Segment::MapKey(key) | Segment::StructItem(key) => {
-                    let item = if let Some(container) = &current_container {
-                        container.get_item(key)?
-                    } else {
-                        object.get_item(key)?
-                    };
+            let item = if let Some(container) = &current_container {
+                container.get_item(segment)?
+            } else {
+                object.get_item(segment)?
+            };
 
-                    match item {
-                        ContainerItem::Container(c) => current_container = Some(c),
-                        _ => return Err(StoreError::PropertyNotFound),
-                    }
-                }
+            match item {
+                ContainerItem::Container(c) => current_container = Some(c),
+                _ => return Err(StoreError::PropertyNotFound),
             }
         }
 
@@ -260,7 +256,7 @@ impl Store {
     /// Returns a `TableProxy` for the specified path.
     pub fn table(&self, store_path: &StorePath) -> Result<TableProxy, StoreError> {
         let (parent_path, last_segment) = split_path(store_path)?;
-        let item = self.get_item_at_path(&parent_path, last_segment.key())?;
+        let item = self.get_item_at_path(&parent_path, &last_segment)?;
 
         if let ContainerItem::Table(table) = item {
             Ok(TableProxy::new(store_path.clone(), self.clone(), table))
@@ -276,7 +272,7 @@ impl Store {
 
         if segments.is_empty() {
             let mut object = self.internal.get_object(parent_path.object_key())?;
-            object.set_item(last_segment.key(), ContainerItem::Table(data.clone()))?;
+            object.set_item(&last_segment, ContainerItem::Table(data.clone()))?;
             let mut writer = self.internal.objects.write();
             writer.insert(parent_path.object_key().clone(), object);
             self.internal.update_blake3_hash(&writer);
@@ -284,7 +280,7 @@ impl Store {
         }
 
         let mut container = self.get_container_internal(&parent_path)?;
-        container.set_item(last_segment.key(), ContainerItem::Table(data.clone()))?;
+        container.set_item(&last_segment, ContainerItem::Table(data.clone()))?;
 
         self.update_container_at_path(&parent_path, container)
     }
@@ -292,7 +288,7 @@ impl Store {
     /// Returns a `BasicProxy` for the specified path.
     pub fn basic(&self, store_path: &StorePath) -> Result<BasicProxy, StoreError> {
         let (parent_path, last_segment) = split_path(store_path)?;
-        let item = self.get_item_at_path(&parent_path, last_segment.key())?;
+        let item = self.get_item_at_path(&parent_path, &last_segment)?;
 
         if let ContainerItem::Basic(basic) = item {
             Ok(BasicProxy::new(store_path.clone(), self.clone(), basic))
@@ -308,7 +304,7 @@ impl Store {
 
         if segments.is_empty() {
             let mut object = self.internal.get_object(parent_path.object_key())?;
-            object.set_item(last_segment.key(), ContainerItem::Basic(data.clone()))?;
+            object.set_item(&last_segment, ContainerItem::Basic(data.clone()))?;
             let mut writer = self.internal.objects.write();
             writer.insert(parent_path.object_key().clone(), object);
             self.internal.update_blake3_hash(&writer);
@@ -316,7 +312,7 @@ impl Store {
         }
 
         let mut container = self.get_container_internal(&parent_path)?;
-        container.set_item(last_segment.key(), ContainerItem::Basic(data.clone()))?;
+        container.set_item(&last_segment, ContainerItem::Basic(data.clone()))?;
 
         self.update_container_at_path(&parent_path, container)
     }
@@ -341,7 +337,7 @@ impl Store {
             let last_segment = segments
                 .first()
                 .expect("segments.len() == 1, so first() must be Some");
-            object.set_item(last_segment.key(), ContainerItem::Container(container))?;
+            object.set_item(last_segment, ContainerItem::Container(container))?;
 
             let mut writer = self.internal.objects.write();
             writer.insert(path.object_key().clone(), object);
@@ -352,7 +348,7 @@ impl Store {
         // We need to update all the way up to the root object
         let (parent_path, last_segment) = split_path(path)?;
         let mut parent_container = self.get_container_internal(&parent_path)?;
-        parent_container.set_item(last_segment.key(), ContainerItem::Container(container))?;
+        parent_container.set_item(&last_segment, ContainerItem::Container(container))?;
 
         self.update_container_at_path(&parent_path, parent_container)
     }
@@ -488,27 +484,17 @@ impl Store {
     }
 }
 
-/// Splits a path into its parent path and the last segment.
+/// Splits a path into its parent path and the last segment key.
 ///
 /// # Errors
 ///
 /// Returns [`StoreError::InvalidPath`] if the path has no segments (i.e. it points only to an object).
-fn split_path(path: &StorePath) -> Result<(StorePath, Segment), StoreError> {
+fn split_path(path: &StorePath) -> Result<(StorePath, StoreKey), StoreError> {
     let mut segments = path.segments().clone();
     let last_segment = segments.pop().ok_or(StoreError::InvalidPath)?;
     let mut parent_path = StorePath::builder(path.object_key().clone()).build();
     for segment in segments {
-        match segment {
-            Segment::Property(key) => {
-                parent_path = parent_path.push_property(key);
-            }
-            Segment::MapKey(key) => {
-                parent_path = parent_path.push_map_key(key);
-            }
-            Segment::StructItem(key) => {
-                parent_path = parent_path.push_struct_item(key);
-            }
-        }
+        parent_path = parent_path.add_segment(segment);
     }
     Ok((parent_path, last_segment))
 }

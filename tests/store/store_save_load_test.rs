@@ -183,8 +183,7 @@ fn test_save_load_comprehensive() {
             .clone()
             .to_builder()
             .struct_item(store_key!("s_basic"))
-            .build()
-            .unwrap();
+            .build();
         let mut p = store.basic(&path).unwrap();
         p.set_value("Struct Value");
         p.push().unwrap();
@@ -198,8 +197,7 @@ fn test_save_load_comprehensive() {
             .clone()
             .to_builder()
             .struct_item(store_key!("s_table"))
-            .build()
-            .unwrap();
+            .build();
         let mut p = store.table(&path).unwrap();
         p.append_row();
         p.set_cell(0, "col_str", "Row 0").unwrap();
@@ -224,8 +222,7 @@ fn test_save_load_comprehensive() {
             .clone()
             .to_builder()
             .struct_item(store_key!("s_basic"))
-            .build()
-            .unwrap();
+            .build();
         let mut p = store.basic(&basic_path).unwrap();
         p.set_value("Map Struct Value");
         p.push().unwrap();
