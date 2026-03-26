@@ -5,7 +5,7 @@
 //! proxy-based access using the [`store_key!`] macro.
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::store::{ProxyStoreTrait, Store};
-use datastore::store_key;
+use datastore::{path, store_key};
 
 fn main() {
     // 1. Create a Store
@@ -45,9 +45,7 @@ fn main() {
 
     // 6. Observe Changes
     // If another handle to the same data exists, it can observe changes.
-    let mut observer_proxy = store
-        .basic(&datastore::StorePath::from("user_123/username"))
-        .unwrap();
+    let mut observer_proxy = store.basic(&path!("user_123/username")).unwrap();
 
     // We update the data via another proxy.
     username_proxy.set_value("john doe updated");
