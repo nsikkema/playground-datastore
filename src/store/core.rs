@@ -172,7 +172,8 @@ impl Store {
         let object_hash = object.hash_container().clone();
         let last_sync_hash = object.current_shared_hash();
 
-        let store_path = StorePath::builder(StoreKey::new_unsafe(key)).build();
+        #[expect(unsafe_code)]
+        let store_path = StorePath::builder(unsafe { StoreKey::new_unsafe(key) }).build();
 
         Ok(ObjectProxy::new(
             store_path.clone(),

@@ -66,7 +66,9 @@ impl ObjectProxy {
 
         let key = key.into();
         self.check_key(key.clone())?;
-        let store_key = StoreKey::new_unsafe(key);
+
+        #[expect(unsafe_code)]
+        let store_key = unsafe { StoreKey::new_unsafe(key) };
         let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.basic(&path)
     }
@@ -79,7 +81,9 @@ impl ObjectProxy {
 
         let key = key.into();
         self.check_key(key.clone())?;
-        let store_key = StoreKey::new_unsafe(key);
+
+        #[expect(unsafe_code)]
+        let store_key = unsafe { StoreKey::new_unsafe(key) };
         let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.table(&path)
     }
@@ -95,7 +99,9 @@ impl ObjectProxy {
 
         let key = key.into();
         self.check_key(key.clone())?;
-        let store_key = StoreKey::new_unsafe(key);
+
+        #[expect(unsafe_code)]
+        let store_key = unsafe { StoreKey::new_unsafe(key) };
         let path = self.path.clone().to_builder().property(store_key).build()?;
         self.store.container(&path)
     }

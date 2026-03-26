@@ -216,7 +216,9 @@ impl StoreKey {
         Ok(StoreKey { key })
     }
 
-    pub(crate) fn new_unsafe(key: ShareableString) -> Self {
+    /// Creates a new `StoreKey` from a `ShareableString` without validating the key.
+    #[expect(unsafe_code)]
+    pub(crate) unsafe fn new_unsafe(key: ShareableString) -> Self {
         StoreKey { key }
     }
 
@@ -234,7 +236,10 @@ impl StoreKey {
     pub fn launder(&self, store: &SharedStringStore) -> StoreKey {
         let laundered_key = store.launder(self.key.clone());
 
-        StoreKey::new_unsafe(laundered_key)
+        #[expect(unsafe_code)]
+        unsafe {
+            StoreKey::new_unsafe(laundered_key)
+        }
     }
 
     /// Returns the BLAKE3 hash of the key.

@@ -1,4 +1,4 @@
-use crate::{ShareableString, StoreError, StoreKey};
+use crate::{StoreError, StoreKey};
 use std::fmt::{Display, Formatter};
 use std::marker::PhantomData;
 
@@ -43,24 +43,6 @@ pub struct StorePath {
     object_key: StoreKey,
     segments: Vec<Segment>,
     kind: PathKind, // derived/validated, not hand-maintained
-}
-
-impl From<&str> for StorePath {
-    fn from(s: &str) -> Self {
-        StorePath::parse(s).unwrap_or_else(|_| StorePath::new_unsafe(""))
-    }
-}
-
-impl From<String> for StorePath {
-    fn from(s: String) -> Self {
-        StorePath::from(s.as_str())
-    }
-}
-
-impl From<ShareableString> for StorePath {
-    fn from(s: ShareableString) -> Self {
-        StorePath::builder(StoreKey::new_unsafe(s)).build()
-    }
 }
 
 impl<S1, S2> From<(S1, S2)> for StorePath
@@ -119,10 +101,6 @@ impl StorePath {
         Self::builder(object_key).build()
     }
 
-    pub(crate) fn new_unsafe(object_key: impl Into<ShareableString>) -> Self {
-        Self::builder(StoreKey::new_unsafe(object_key.into())).build()
-    }
-
     /// Returns a builder for creating a `StorePath`.
     pub fn builder(object_key: impl Into<StoreKey>) -> StorePathBuilder<ObjectState> {
         StorePathBuilder::<ObjectState>::new(object_key.into())
@@ -169,18 +147,18 @@ impl StorePath {
             }
             let (segment, next_kind) = match kind {
                 PathKind::Object => (
-                    Segment::Property(StoreKey::new_unsafe(part.into())),
+                    Segment::Property(StoreKey::new(part.into())?),
                     PathKind::Property,
                 ),
                 PathKind::Property => {
                     // Ambiguous: default to MapKey as Property -> MapKey is the most common transition.
                     (
-                        Segment::MapKey(StoreKey::new_unsafe(part.into())),
+                        Segment::MapKey(StoreKey::new(part.into())?),
                         PathKind::MapEntry,
                     )
                 }
                 PathKind::MapEntry => (
-                    Segment::StructItem(StoreKey::new_unsafe(part.into())),
+                    Segment::StructItem(StoreKey::new(part.into())?),
                     PathKind::StructItem,
                 ),
                 PathKind::StructItem => {
@@ -552,18 +530,6 @@ mod tests {
         let p0: StorePath = StorePath::parse("obj/prop/key").unwrap();
         assert_eq!(p0.to_string(), "obj/prop/key");
         assert_eq!(p0.get_kind(), &PathKind::MapEntry);
-
-        // From String object
-        let s = String::from("obj/prop");
-        let ps: StorePath = s.into();
-        assert_eq!(ps.to_string(), "obj/prop");
-        assert_eq!(ps.get_kind(), &PathKind::Property);
-
-        // From ShareableString
-        let ss = ShareableString::from("obj");
-        let pss: StorePath = ss.into();
-        assert_eq!(pss.to_string(), "obj");
-        assert_eq!(pss.get_kind(), &PathKind::Object);
 
         // From tuple
         let p1: StorePath = (store_key!("obj"), store_key!("prop")).into();
