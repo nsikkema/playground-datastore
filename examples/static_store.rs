@@ -93,9 +93,7 @@ fn main() {
             &struct_container
                 .path()
                 .clone()
-                .to_builder()
-                .struct_item(store_key!("field_1"))
-                .build(),
+                .with_segment(store_key!("field_1")),
         )
         .unwrap();
     s_field_1.set_value("Struct Value");
@@ -106,9 +104,7 @@ fn main() {
             &struct_container
                 .path()
                 .clone()
-                .to_builder()
-                .struct_item(store_key!("field_2"))
-                .build(),
+                .with_segment(store_key!("field_2")),
         )
         .unwrap();
     s_field_2.set_value("123");
@@ -125,9 +121,7 @@ fn main() {
             &entry_proxy
                 .path()
                 .clone()
-                .to_builder()
-                .struct_item(store_key!("field_1"))
-                .build(),
+                .with_segment(store_key!("field_1")),
         )
         .unwrap();
     m_field_1.set_value("Map Entry Value");
@@ -138,9 +132,7 @@ fn main() {
             &entry_proxy
                 .path()
                 .clone()
-                .to_builder()
-                .struct_item(store_key!("field_2"))
-                .build(),
+                .with_segment(store_key!("field_2")),
         )
         .unwrap();
     m_field_2.set_value("456");

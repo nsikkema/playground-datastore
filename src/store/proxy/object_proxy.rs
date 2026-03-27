@@ -69,7 +69,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.basic(&path)
     }
 
@@ -84,7 +84,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.table(&path)
     }
 
@@ -102,7 +102,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.container(&path)
     }
 

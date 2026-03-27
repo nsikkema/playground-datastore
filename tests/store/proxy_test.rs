@@ -57,18 +57,14 @@ fn test_complex_proxy_structure() {
     let table_path = struct_proxy
         .path()
         .clone()
-        .to_builder()
-        .struct_item(store_key!("table"))
-        .build();
+        .with_segment(store_key!("table"));
     let mut table_proxy = store.table(&table_path).unwrap();
 
     // 7. Access Basic Proxy from Struct
     let basic_path = struct_proxy
         .path()
         .clone()
-        .to_builder()
-        .struct_item(store_key!("inner_basic"))
-        .build();
+        .with_segment(store_key!("inner_basic"));
     let mut basic_proxy = store.basic(&basic_path).unwrap();
 
     // 8. Modify values at deep levels

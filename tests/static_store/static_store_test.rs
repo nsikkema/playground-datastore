@@ -9,7 +9,7 @@ use datastore::definition::{
 use datastore::shareable_string::SharedStringStore;
 use datastore::static_store::data::{StaticBasic, StaticStruct, StaticStructItem, StaticTable};
 use datastore::store::{ProxyStoreTrait, Store};
-use datastore::store_key;
+use datastore::{StorePath, store_key};
 use std::collections::BTreeMap;
 
 #[test]
@@ -87,9 +87,7 @@ fn test_store_to_static() {
         .finish();
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
-    let prop_path = datastore::StorePath::builder(obj_key)
-        .property(store_key!("prop1"))
-        .build();
+    let prop_path = StorePath::new(obj_key).with_segment(store_key!("prop1"));
 
     {
         let mut basic = store.basic(&prop_path).unwrap();
@@ -132,9 +130,7 @@ fn test_static_to_store_roundtrip() {
         .finish();
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
-    let prop_path = datastore::StorePath::builder(obj_key)
-        .property(store_key!("prop1"))
-        .build();
+    let prop_path = datastore::StorePath::new(obj_key).with_segment(store_key!("prop1"));
 
     {
         let mut basic = store.basic(&prop_path).unwrap();
@@ -184,11 +180,7 @@ fn test_update_from_static() {
     // Here we'll just modify the store and create a new static one to simulate an updated version.
     {
         let mut basic = store
-            .basic(
-                &datastore::StorePath::builder(obj_key.clone())
-                    .property(store_key!("prop1"))
-                    .build(),
-            )
+            .basic(&datastore::StorePath::new(obj_key.clone()).with_segment(store_key!("prop1")))
             .unwrap();
         basic.set_value("Updated");
         basic.push().unwrap();
@@ -417,7 +409,7 @@ fn test_static_map_with_structs() {
         let s_proxy = map_proxy.insert_map_entry(store_key!("key1")).unwrap();
         let s_path = s_proxy.path();
         let mut b_proxy = store
-            .basic(&s_path.clone().add_segment(store_key!("s_prop")))
+            .basic(&s_path.clone().with_segment(store_key!("s_prop")))
             .unwrap();
         b_proxy.set_value("initial");
         b_proxy.push().unwrap();
@@ -444,11 +436,10 @@ fn test_static_map_with_structs() {
 
     other_store.sync_from_static(&static_store).unwrap();
 
-    let s_path = datastore::StorePath::builder(store_key!("my_object"))
-        .property(store_key!("my_map"))
-        .map_key(store_key!("key1"))
-        .build();
-    let b_path = s_path.add_segment(store_key!("s_prop"));
+    let s_path = datastore::StorePath::new(store_key!("my_object"))
+        .with_segment(store_key!("my_map"))
+        .with_segment(store_key!("key1"));
+    let b_path = s_path.clone().with_segment(store_key!("s_prop"));
     let b_proxy = other_store.basic(&b_path).unwrap();
     assert_eq!(b_proxy.value().as_str(), "initial");
 }
@@ -539,9 +530,7 @@ fn test_static_store_all_types() {
                 &struct_container
                     .path()
                     .clone()
-                    .to_builder()
-                    .struct_item(store_key!("field_1"))
-                    .build(),
+                    .with_segment(store_key!("field_1")),
             )
             .unwrap();
         s_field_1.set_value("Struct Value");
@@ -552,9 +541,7 @@ fn test_static_store_all_types() {
                 &struct_container
                     .path()
                     .clone()
-                    .to_builder()
-                    .struct_item(store_key!("field_2"))
-                    .build(),
+                    .with_segment(store_key!("field_2")),
             )
             .unwrap();
         s_field_2.set_value("123");
@@ -572,9 +559,7 @@ fn test_static_store_all_types() {
                 &entry_proxy
                     .path()
                     .clone()
-                    .to_builder()
-                    .struct_item(store_key!("field_1"))
-                    .build(),
+                    .with_segment(store_key!("field_1")),
             )
             .unwrap();
         m_field_1.set_value("Map Entry Value");
@@ -585,9 +570,7 @@ fn test_static_store_all_types() {
                 &entry_proxy
                     .path()
                     .clone()
-                    .to_builder()
-                    .struct_item(store_key!("field_2"))
-                    .build(),
+                    .with_segment(store_key!("field_2")),
             )
             .unwrap();
         m_field_2.set_value("456");
@@ -674,9 +657,7 @@ fn test_static_store_all_types() {
             &rest_struct_container
                 .path()
                 .clone()
-                .to_builder()
-                .struct_item(store_key!("field_1"))
-                .build(),
+                .with_segment(store_key!("field_1")),
         )
         .unwrap();
     assert_eq!(rest_s_field_1.value().as_str(), "Struct Value");
@@ -685,10 +666,8 @@ fn test_static_store_all_types() {
     let rest_m_path = rest_map_container
         .path()
         .clone()
-        .to_builder()
-        .map_key(store_key!("entry_1"))
-        .struct_item(store_key!("field_2"))
-        .build();
+        .with_segment(store_key!("entry_1"))
+        .with_segment(store_key!("field_2"));
     let rest_m_field_2 = restored_store.basic(&rest_m_path).unwrap();
     assert_eq!(rest_m_field_2.value().as_str(), "456");
 }
