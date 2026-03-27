@@ -1,3 +1,4 @@
+mod proxy_basic;
 mod proxy_test;
 mod recovery_test;
 mod store_add_test;
