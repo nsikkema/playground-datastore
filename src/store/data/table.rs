@@ -123,11 +123,11 @@ impl Table {
     pub(crate) fn set_row(
         &mut self,
         row_index: usize,
-        values: Vec<ShareableString>,
+        values: BTreeMap<ShareableString, ShareableString>,
     ) -> Result<(), StoreError> {
         if let Some(row) = self.rows.get_mut(row_index) {
-            for (value, key) in values.into_iter().zip(self.definition.keys()) {
-                if let Some(cell) = row.get_mut(key) {
+            for (key, value) in values {
+                if let Some(cell) = row.get_mut(key.as_str()) {
                     *cell = value;
                 }
             }

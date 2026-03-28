@@ -10,6 +10,7 @@ use datastore::definition::{
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::{ProxyStoreTrait, Store};
 use datastore::store_key;
+use std::collections::BTreeMap;
 
 #[test]
 fn test_complex_proxy_structure() {
@@ -75,7 +76,9 @@ fn test_complex_proxy_structure() {
     table_proxy.set_cell(0, "col1", "new_value").unwrap();
 
     table_proxy.append_row();
-    table_proxy.set_row(1, vec!["new_value"]).unwrap();
+    table_proxy
+        .set_row(1, BTreeMap::from([("col1", "new_value")]))
+        .unwrap();
 
     // 9. Check change detection
     assert!(basic_proxy.has_changed());

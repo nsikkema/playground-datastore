@@ -67,14 +67,23 @@ impl TableProxy {
     }
 
     /// Sets the values of a row in the table.
-    pub fn set_row<S: Into<ShareableString>>(
+    pub fn set_row<K, V>(
         &mut self,
         row_index: usize,
-        values: Vec<S>,
-    ) -> Result<(), StoreError> {
-        let values: Vec<ShareableString> = values
+        values: BTreeMap<K, V>,
+    ) -> Result<(), StoreError>
+    where
+        K: Into<ShareableString> + Ord,
+        V: Into<ShareableString>,
+    {
+        let values: BTreeMap<ShareableString, ShareableString> = values
             .into_iter()
-            .map(|v| self.store.launder_string(v.into()))
+            .map(|(k, v)| {
+                (
+                    self.store.launder_string(k.into()),
+                    self.store.launder_string(v.into()),
+                )
+            })
             .collect();
         self.data.set_row(row_index, values)
     }
