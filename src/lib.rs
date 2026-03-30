@@ -22,7 +22,7 @@
 //!
 //! ```rust
 //! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
-//! use datastore::store::{ProxyStoreTrait, Store};
+//! use datastore::store::Store;
 //! use datastore::{path, store_key, StorePath};
 //!
 //! // 1. Define your data structure

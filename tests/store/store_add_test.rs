@@ -5,7 +5,7 @@
 //! later mutations in either store do not affect the other.
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{StorePath, store_key};
 
 #[test]

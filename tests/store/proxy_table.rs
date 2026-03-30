@@ -2,7 +2,7 @@ use datastore::definition::{
     BasicDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{StoreError, path, store_key};
 use std::collections::BTreeMap;
 
@@ -44,7 +44,10 @@ fn test_proxy_table() {
     );
     assert_eq!(table_proxy.column_count(), 2);
     assert_eq!(table_proxy.definition(), table_definition);
-    assert_eq!(table_proxy.object().unwrap().description().as_ref(), "Test Object");
+    assert_eq!(
+        table_proxy.object().unwrap().description().as_ref(),
+        "Test Object"
+    );
     assert_eq!(table_definition, table_proxy.definition());
     assert_eq!(table_proxy.path(), path!("object" / "catalog"));
     assert_eq!(table_proxy.description(), "Price List");

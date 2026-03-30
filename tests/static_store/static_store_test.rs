@@ -8,7 +8,7 @@ use datastore::definition::{
 };
 use datastore::shareable_string::SharedStringStore;
 use datastore::static_store::data::{StaticBasic, StaticStruct, StaticStructItem, StaticTable};
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{StorePath, store_key};
 use std::collections::BTreeMap;
 

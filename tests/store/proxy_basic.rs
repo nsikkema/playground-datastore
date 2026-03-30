@@ -1,6 +1,6 @@
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{StoreError, path, store_key};
 
 #[test]

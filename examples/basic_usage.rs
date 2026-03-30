@@ -4,7 +4,7 @@
 //! properties, adds an object instance, and reads/writes values through
 //! proxy-based access using the [`store_key!`] macro.
 use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{path, store_key};
 
 fn main() {

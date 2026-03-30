@@ -8,7 +8,7 @@ use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
     TableDefinition,
 };
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::store_key;
 
 fn main() {

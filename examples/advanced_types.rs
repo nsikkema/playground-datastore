@@ -9,7 +9,7 @@ use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
     TableDefinition,
 };
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::{path, store_key};
 use std::collections::BTreeMap;
 

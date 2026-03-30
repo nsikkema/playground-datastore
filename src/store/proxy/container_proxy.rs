@@ -1,8 +1,6 @@
 use crate::shareable_string::ShareableString;
 use crate::store::traits::TreePrint;
-use crate::store::{
-    Container, ContainerDefinition, ObjectProxy, ProxyStoreTrait, Store, StoreHashContainer,
-};
+use crate::store::{Container, ContainerDefinition, ObjectProxy, Store, StoreHashContainer};
 use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a container in the store.
@@ -53,29 +51,32 @@ impl ContainerProxy {
             _ => Err(StoreError::PropertyNotFound),
         }
     }
-}
 
-impl ProxyStoreTrait for ContainerProxy {
-    fn path(&self) -> &StorePath {
+    /// Returns the path to the data this proxy represents.
+    pub fn path(&self) -> &StorePath {
         &self.path
     }
 
-    fn description(&self) -> ShareableString {
+    /// Returns a description of the data.
+    pub fn description(&self) -> ShareableString {
         match &self.definition {
             ContainerDefinition::Struct(_struct) => _struct.description(),
             ContainerDefinition::Map(map) => map.description(),
         }
     }
 
-    fn is_valid(&self) -> bool {
+    /// Checks if the proxy is still valid.
+    pub fn is_valid(&self) -> bool {
         self.object_hash.get() != [0u8; 32]
     }
 
-    fn has_changed(&self) -> bool {
+    /// Returns true if the data has changed compared to the store.
+    pub fn has_changed(&self) -> bool {
         self.last_sync_hash != self.object_hash.get()
     }
 
-    fn pull(&mut self) -> Result<(), StoreError> {
+    /// Pulls the latest data from the store.
+    pub fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
             let proxy = match self.store.container(&self.path) {
                 Ok(p) => p,
@@ -102,26 +103,8 @@ impl ProxyStoreTrait for ContainerProxy {
         Ok(())
     }
 
-    fn push(&mut self) -> Result<(), StoreError> {
-        if !self.is_valid() {
-            let proxy = match self.store.container(&self.path) {
-                Ok(p) => p,
-                Err(_) => return Err(StoreError::ExpiredProxy),
-            };
-            if proxy.definition == self.definition {
-                self.keys = proxy.keys;
-                self.object_hash = proxy.object_hash;
-                self.last_sync_hash = proxy.last_sync_hash;
-            } else {
-                return Err(StoreError::ExpiredProxy);
-            }
-        }
-
-        self.last_sync_hash = self.object_hash.get(); // Sync hash after push
-        Ok(())
-    }
-
-    fn object(&self) -> Result<ObjectProxy, StoreError> {
+    /// Returns an `ObjectProxy` for the object containing this data.
+    pub fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
     }

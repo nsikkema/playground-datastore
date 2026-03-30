@@ -8,7 +8,7 @@ use datastore::definition::{
     TableDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::store_key;
 use std::collections::BTreeMap;
 
