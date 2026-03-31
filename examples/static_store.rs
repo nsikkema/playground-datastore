@@ -4,12 +4,7 @@
 //! Builds a store containing objects with structs, maps, and tables, converts
 //! it to a static representation, and shows how to traverse the static data
 //! hierarchy for fast, allocation-free reads.
-use datastore::definition::{
-    BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
-    TableDefinition,
-};
-use datastore::store::Store;
-use datastore::store_key;
+use datastore::prelude::*;
 
 fn main() {
     // 1. Initialize the shared string store and the main store.

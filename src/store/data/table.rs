@@ -1,8 +1,9 @@
+use crate::StoreError;
 use crate::definition::TableDefinition;
+use crate::key::StoreKey;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticTable;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
-use crate::{StoreError, StoreKey};
 use std::collections::BTreeMap;
 
 /// Represents a table of data in the store.

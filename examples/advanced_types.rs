@@ -4,13 +4,7 @@
 //! Shows how to define reusable struct types, key-value maps, and row-based
 //! tables, then create and populate them in a [`Store`] using proxy-based access
 //! and [`StorePath`] navigation.
-use datastore::StorePath;
-use datastore::definition::{
-    BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
-    TableDefinition,
-};
-use datastore::store::Store;
-use datastore::{path, store_key};
+use datastore::prelude::*;
 use std::collections::BTreeMap;
 
 fn main() {

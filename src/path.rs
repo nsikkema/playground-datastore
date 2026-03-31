@@ -1,4 +1,5 @@
-use crate::{StoreError, StoreKey};
+use crate::StoreError;
+use crate::key::StoreKey;
 use std::fmt::{Display, Formatter};
 
 /// A path to a piece of data within the store.
@@ -167,21 +168,21 @@ impl PartialEq<StorePath> for &StorePath {
 #[macro_export]
 macro_rules! path {
     ($obj:tt $(/ $seg:tt)+) => {{
-        let mut p = $crate::StorePath::new($crate::store_key!($obj));
+        let mut p = $crate::path::StorePath::new($crate::store_key!($obj));
         $(
             p = p.with_segment($crate::store_key!($seg));
         )+
         p
     }};
     ($obj:tt) => {
-        $crate::StorePath::new($crate::store_key!($obj))
+        $crate::path::StorePath::new($crate::store_key!($obj))
     };
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{StorePath, store_key};
+    use crate::store_key;
 
     #[test]
     fn test_valid_paths() {

@@ -1,5 +1,5 @@
 use crate::StoreError;
-use crate::StoreKey;
+use crate::key::StoreKey;
 use crate::static_store::data::StaticObject;
 use crate::store::{Store, TreePrint};
 use serde::{Deserialize, Serialize};

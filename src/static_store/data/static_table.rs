@@ -1,5 +1,5 @@
-use crate::StoreKey;
 use crate::definition::TableDefinition;
+use crate::key::StoreKey;
 use crate::shareable_string::ShareableString;
 use crate::store::data::Table;
 use crate::store::{CommonStoreTraitInternal, TreePrint};

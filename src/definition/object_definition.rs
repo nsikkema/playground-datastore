@@ -1,6 +1,7 @@
+use crate::StoreError;
 use crate::definition::PropertyDefinition;
+use crate::key::StoreKey;
 use crate::shareable_string::{ShareableString, SharedStringStore};
-use crate::{StoreError, StoreKey};
 use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::sync::Arc;

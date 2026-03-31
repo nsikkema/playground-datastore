@@ -1,10 +1,11 @@
+use crate::StoreError;
 use crate::definition::{ObjectDefinition, PropertyDefinitionType};
+use crate::key::StoreKey;
 use crate::shareable_string::SharedStringStore;
 use crate::static_store::data::StaticObject;
 use crate::store::{
     Basic, CommonStoreTraitInternal, Container, ContainerItem, StoreHashContainer, Table, TreePrint,
 };
-use crate::{StoreError, StoreKey};
 use rustc_hash::FxHashMap;
 
 /// A top-level object in the store.

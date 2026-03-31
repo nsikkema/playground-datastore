@@ -21,9 +21,7 @@
 //! ## Example
 //!
 //! ```rust
-//! use datastore::definition::{ObjectDefinition, BasicDefinition, PropertyDefinition};
-//! use datastore::store::Store;
-//! use datastore::{path, store_key, StorePath};
+//! use datastore::prelude::*;
 //!
 //! // 1. Define your data structure
 //! let mut builder = ObjectDefinition::builder("My Object");
@@ -52,7 +50,10 @@
 pub mod definition;
 /// Keys and associated traits.
 pub mod key;
-mod path;
+/// Path types for addressing data within the store.
+pub mod path;
+/// Convenience re-exports of the most common types and macros.
+pub mod prelude;
 /// Shareable strings for efficient string handling.
 pub mod shareable_string;
 /// Static store implementation for efficient persistence and access.
@@ -60,10 +61,7 @@ pub mod static_store;
 /// Dynamic store implementation with proxy-based access.
 pub mod store;
 
-pub use crate::key::{ConstStoreKey, StoreKey};
-pub use crate::path::*;
-
-use crate::shareable_string::ShareableString;
+use crate::shareable_string::string::ShareableString;
 use std::fmt::{Display, Formatter};
 
 /// Error types for the store operations.

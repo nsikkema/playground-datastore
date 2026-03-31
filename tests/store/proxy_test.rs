@@ -173,7 +173,7 @@ fn test_proxy_deleted_object() {
     let obj_def = builder.finish();
 
     // 2. Create Object in Store
-    let obj_key: datastore::StoreKey = store_key!("my_object").into();
+    let obj_key: datastore::key::StoreKey = store_key!("my_object").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     assert!(obj_proxy.is_valid());

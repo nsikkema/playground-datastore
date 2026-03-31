@@ -3,9 +3,7 @@
 //! Creates a [`Store`], defines an [`ObjectDefinition`] with string and number
 //! properties, adds an object instance, and reads/writes values through
 //! proxy-based access using the [`store_key!`] macro.
-use datastore::definition::{BasicDefinition, ObjectDefinition, PropertyDefinition};
-use datastore::store::Store;
-use datastore::{path, store_key};
+use datastore::prelude::*;
 
 fn main() {
     // 1. Create a Store

@@ -1,10 +1,12 @@
+use crate::StoreError;
 use crate::definition::ObjectDefinition;
+use crate::key::StoreKey;
+use crate::path::StorePath;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::StaticStore;
 use crate::store::data::{Basic, Container, ContainerItem, Object, Table};
 use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
-use crate::{StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;

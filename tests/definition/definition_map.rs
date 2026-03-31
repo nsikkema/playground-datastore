@@ -1,7 +1,8 @@
 use datastore::definition::{
     BasicDefinition, MapDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
-use datastore::{StoreKey, store_key};
+use datastore::key::StoreKey;
+use datastore::store_key;
 
 #[test]
 fn test_map_definition() {

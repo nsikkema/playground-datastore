@@ -6,8 +6,9 @@
 use datastore::definition::{
     BasicDefinition, ObjectDefinition, ObjectDefinitionBuilder, PropertyDefinition,
 };
+use datastore::key::StoreKey;
 use datastore::shareable_string::SharedStringStore;
-use datastore::{StoreError, StoreKey, store_key};
+use datastore::{StoreError, store_key};
 
 #[test]
 fn test_object_builder_pattern() {

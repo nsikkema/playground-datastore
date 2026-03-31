@@ -8,9 +8,10 @@ use datastore::definition::{
     BasicDefinition, ChoiceDefinition, FileDefinition, MapDefinition, ObjectDefinition,
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
+use datastore::path::StorePath;
 use datastore::shareable_string::SharedStringStore;
 use datastore::store::Store;
-use datastore::{StorePath, store_key};
+use datastore::store_key;
 use std::fs;
 
 #[test]
@@ -144,7 +145,7 @@ fn test_save_load_comprehensive() {
         .with_inserted(store_key!("p_map"), PropertyDefinition::new("Map", map_def))
         .finish();
 
-    let obj_key: datastore::StoreKey = store_key!("comp_obj").into();
+    let obj_key: datastore::key::StoreKey = store_key!("comp_obj").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     // 3. Populate data

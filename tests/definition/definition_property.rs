@@ -1,8 +1,8 @@
-use datastore::StoreKey;
 use datastore::definition::{
     BasicDefinition, MapDefinition, PropertyDefinition, StructDefinition, StructItemDefinition,
     TableDefinition,
 };
+use datastore::key::StoreKey;
 
 #[test]
 fn test_property_definition() {

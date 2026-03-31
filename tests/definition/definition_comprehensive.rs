@@ -10,8 +10,9 @@ use datastore::definition::{
     ObjectDefinition, PropertyDefinition, PropertyDefinitionType, StructDefinition,
     StructItemDefinition, TableDefinition,
 };
+use datastore::key::StoreKey;
 use datastore::shareable_string::SharedStringStore;
-use datastore::{StoreKey, store_key};
+use datastore::store_key;
 
 #[test]
 fn test_basic_definition_comprehensive() {

@@ -6,10 +6,11 @@
 use datastore::definition::{
     BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, TableDefinition,
 };
+use datastore::path::StorePath;
 use datastore::shareable_string::SharedStringStore;
-use datastore::static_store::data::{StaticBasic, StaticStruct, StaticStructItem, StaticTable};
+use datastore::static_store::{StaticBasic, StaticStruct, StaticStructItem, StaticTable};
 use datastore::store::Store;
-use datastore::{StorePath, store_key};
+use datastore::store_key;
 use std::collections::BTreeMap;
 
 #[test]
@@ -130,7 +131,7 @@ fn test_static_to_store_roundtrip() {
         .finish();
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
-    let prop_path = datastore::StorePath::new(obj_key).with_segment(store_key!("prop1"));
+    let prop_path = datastore::path::StorePath::new(obj_key).with_segment(store_key!("prop1"));
 
     {
         let mut basic = store.basic(&prop_path).unwrap();
@@ -180,7 +181,9 @@ fn test_update_from_static() {
     // Here we'll just modify the store and create a new static one to simulate an updated version.
     {
         let mut basic = store
-            .basic(&datastore::StorePath::new(obj_key.clone()).with_segment(store_key!("prop1")))
+            .basic(
+                &datastore::path::StorePath::new(obj_key.clone()).with_segment(store_key!("prop1")),
+            )
             .unwrap();
         basic.set_value("Updated");
         basic.push().unwrap();
@@ -436,7 +439,7 @@ fn test_static_map_with_structs() {
 
     other_store.sync_from_static(&static_store).unwrap();
 
-    let s_path = datastore::StorePath::new(store_key!("my_object"))
+    let s_path = datastore::path::StorePath::new(store_key!("my_object"))
         .with_segment(store_key!("my_map"))
         .with_segment(store_key!("key1"));
     let b_path = s_path.clone().with_segment(store_key!("s_prop"));

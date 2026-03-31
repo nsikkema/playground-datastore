@@ -1,8 +1,9 @@
-use crate::definition::BasicDefinition;
+use crate::StoreError;
+use crate::definition::basic_definition::BasicDefinition;
+use crate::path::StorePath;
 use crate::shareable_string::ShareableString;
 use crate::store::traits::TreePrint;
 use crate::store::{Basic, CommonStoreTraitInternal, ObjectProxy, Store};
-use crate::{StoreError, StorePath};
 
 /// A proxy for a basic data value in the store.
 #[derive(Debug)]

@@ -1,7 +1,9 @@
+use crate::StoreError;
+use crate::key::StoreKey;
+use crate::path::StorePath;
 use crate::shareable_string::ShareableString;
 use crate::store::traits::TreePrint;
 use crate::store::{Container, ContainerDefinition, ObjectProxy, Store, StoreHashContainer};
-use crate::{StoreError, StoreKey, StorePath};
 
 /// A proxy for a container in the store.
 #[derive(Debug)]
