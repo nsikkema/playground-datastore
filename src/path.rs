@@ -1,6 +1,6 @@
-use crate::{StoreError, StoreKey};
+use crate::StoreError;
+use crate::key::StoreKey;
 use std::fmt::{Display, Formatter};
-use std::marker::PhantomData;
 
 /// A path to a piece of data within the store.
 #[derive(Debug, Clone, PartialEq, Eq)]
@@ -15,7 +15,7 @@ where
     S2: Into<StoreKey>,
 {
     fn from((s1, s2): (S1, S2)) -> Self {
-        StorePath::new(s1).segment(s2)
+        StorePath::new(s1).with_segment(s2)
     }
 }
 
@@ -26,7 +26,7 @@ where
     S3: Into<StoreKey>,
 {
     fn from((s1, s2, s3): (S1, S2, S3)) -> Self {
-        StorePath::new(s1).segment(s2).segment(s3)
+        StorePath::new(s1).with_segment(s2).with_segment(s3)
     }
 }
 
@@ -38,7 +38,10 @@ where
     S4: Into<StoreKey>,
 {
     fn from((s1, s2, s3, s4): (S1, S2, S3, S4)) -> Self {
-        StorePath::new(s1).segment(s2).segment(s3).segment(s4)
+        StorePath::new(s1)
+            .with_segment(s2)
+            .with_segment(s3)
+            .with_segment(s4)
     }
 }
 
@@ -52,27 +55,30 @@ where
 {
     fn from((s1, s2, s3, s4, s5): (S1, S2, S3, S4, S5)) -> Self {
         StorePath::new(s1)
-            .segment(s2)
-            .segment(s3)
-            .segment(s4)
-            .segment(s5)
+            .with_segment(s2)
+            .with_segment(s3)
+            .with_segment(s4)
+            .with_segment(s5)
+    }
+}
+
+impl Display for StorePath {
+    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", self.object_key)?;
+        for seg in &self.segments {
+            write!(f, "/{}", seg)?;
+        }
+        Ok(())
     }
 }
 
 impl StorePath {
     /// Creates a new `StorePath` pointing to an object.
     pub fn new(object_key: impl Into<StoreKey>) -> Self {
-        Self::builder(object_key).build()
-    }
-
-    /// Returns a builder for creating a `StorePath`.
-    pub fn builder(object_key: impl Into<StoreKey>) -> StorePathBuilder<ObjectState> {
-        StorePathBuilder::<ObjectState>::new(object_key.into())
-    }
-
-    /// Converts the `StorePath` back into a builder.
-    pub fn to_builder(self) -> StorePathBuilder<AnyState> {
-        StorePathBuilder::from(self)
+        Self {
+            object_key: object_key.into(),
+            segments: vec![],
+        }
     }
 
     /// Returns the object key part of the path.
@@ -109,13 +115,8 @@ impl StorePath {
         })
     }
 
-    /// Adds a segment to the path and returns the new path.
-    pub fn segment(self, key: impl Into<StoreKey>) -> Self {
-        self.add_segment(key)
-    }
-
     /// Pushes a segment key onto the path and returns the new path.
-    pub fn add_segment(mut self, key: impl Into<StoreKey>) -> Self {
+    pub fn with_segment(mut self, key: impl Into<StoreKey>) -> Self {
         self.segments.push(key.into());
         self
     }
@@ -167,201 +168,21 @@ impl PartialEq<StorePath> for &StorePath {
 #[macro_export]
 macro_rules! path {
     ($obj:tt $(/ $seg:tt)+) => {{
-        let mut p = $crate::StorePath::new($crate::store_key!($obj));
+        let mut p = $crate::path::StorePath::new($crate::store_key!($obj));
         $(
-            p = p.segment($crate::store_key!($seg));
+            p = p.with_segment($crate::store_key!($seg));
         )+
         p
     }};
     ($obj:tt) => {
-        $crate::StorePath::new($crate::store_key!($obj))
+        $crate::path::StorePath::new($crate::store_key!($obj))
     };
-}
-
-/// State for a `StorePathBuilder` pointing to an object.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct ObjectState;
-/// State for a `StorePathBuilder` pointing to a property.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct PropertyState;
-/// State for a `StorePathBuilder` pointing to a map entry.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct MapEntryState;
-/// State for a `StorePathBuilder` pointing to a struct item.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StructItemState;
-/// State for a `StorePathBuilder` that can be in any state.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct AnyState;
-
-/// A builder for creating `StorePath` instances.
-#[derive(Debug, Clone, PartialEq, Eq)]
-pub struct StorePathBuilder<S> {
-    object_key: StoreKey,
-    segments: Vec<StoreKey>,
-    _state: PhantomData<S>,
-}
-
-impl StorePathBuilder<ObjectState> {
-    fn new(object_key: StoreKey) -> Self {
-        StorePathBuilder {
-            object_key,
-            segments: Vec::new(),
-            _state: PhantomData,
-        }
-    }
-}
-
-impl From<StorePath> for StorePathBuilder<AnyState> {
-    fn from(path: StorePath) -> Self {
-        Self {
-            object_key: path.object_key,
-            segments: path.segments,
-            _state: PhantomData,
-        }
-    }
-}
-
-impl StorePathBuilder<ObjectState> {
-    /// Converts the builder to an `AnyState` builder.
-    pub fn to_any(self) -> StorePathBuilder<AnyState> {
-        StorePathBuilder {
-            object_key: self.object_key,
-            segments: self.segments,
-            _state: PhantomData,
-        }
-    }
-
-    /// Adds a property segment to the path.
-    pub fn property(
-        mut self,
-        property_key: impl Into<StoreKey>,
-    ) -> StorePathBuilder<PropertyState> {
-        self.segments.push(property_key.into());
-        StorePathBuilder {
-            object_key: self.object_key,
-            segments: self.segments,
-            _state: PhantomData,
-        }
-    }
-
-    /// Builds the `StorePath`.
-    pub fn build(self) -> StorePath {
-        StorePath {
-            object_key: self.object_key,
-            segments: self.segments,
-        }
-    }
-}
-
-impl StorePathBuilder<PropertyState> {
-    /// Adds a map key segment to the path.
-    pub fn map_key(mut self, map_key: impl Into<StoreKey>) -> StorePathBuilder<MapEntryState> {
-        self.segments.push(map_key.into());
-        StorePathBuilder {
-            object_key: self.object_key,
-            segments: self.segments,
-            _state: PhantomData,
-        }
-    }
-
-    /// Adds a struct item segment to the path.
-    pub fn struct_item(
-        mut self,
-        struct_key: impl Into<StoreKey>,
-    ) -> StorePathBuilder<StructItemState> {
-        self.segments.push(struct_key.into());
-        StorePathBuilder {
-            object_key: self.object_key,
-            segments: self.segments,
-            _state: PhantomData,
-        }
-    }
-
-    /// Builds the `StorePath`.
-    pub fn build(self) -> StorePath {
-        StorePath {
-            object_key: self.object_key,
-            segments: self.segments,
-        }
-    }
-}
-
-impl StorePathBuilder<MapEntryState> {
-    /// Adds a struct item segment to the path.
-    pub fn struct_item(
-        mut self,
-        struct_key: impl Into<StoreKey>,
-    ) -> StorePathBuilder<StructItemState> {
-        self.segments.push(struct_key.into());
-        StorePathBuilder {
-            object_key: self.object_key,
-            segments: self.segments,
-            _state: PhantomData,
-        }
-    }
-
-    /// Builds the `StorePath`.
-    pub fn build(self) -> StorePath {
-        StorePath {
-            object_key: self.object_key,
-            segments: self.segments,
-        }
-    }
-}
-
-impl Display for StorePath {
-    fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", self.object_key)?;
-        for segment in &self.segments {
-            write!(f, "/{}", segment)?;
-        }
-        Ok(())
-    }
-}
-
-impl StorePathBuilder<StructItemState> {
-    /// Builds the `StorePath`.
-    pub fn build(self) -> StorePath {
-        StorePath {
-            object_key: self.object_key,
-            segments: self.segments,
-        }
-    }
-}
-
-impl StorePathBuilder<AnyState> {
-    /// Adds a segment to the path.
-    pub fn property(mut self, property_key: impl Into<StoreKey>) -> Self {
-        self.segments.push(property_key.into());
-        self
-    }
-
-    /// Adds a segment to the path.
-    pub fn map_key(mut self, map_key: impl Into<StoreKey>) -> Self {
-        self.segments.push(map_key.into());
-        self
-    }
-
-    /// Adds a segment to the path.
-    pub fn struct_item(mut self, struct_key: impl Into<StoreKey>) -> Self {
-        self.segments.push(struct_key.into());
-        self
-    }
-
-    /// Builds the `StorePath`.
-    pub fn build(self) -> StorePath {
-        StorePath {
-            object_key: self.object_key,
-            segments: self.segments,
-        }
-    }
 }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::{StorePath, store_key};
+    use crate::store_key;
 
     #[test]
     fn test_valid_paths() {
@@ -370,31 +191,26 @@ mod tests {
         assert_eq!(path.to_string(), "obj");
 
         // Property path
-        let path = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .build();
+        let path = StorePath::new(store_key!("obj")).with_segment(store_key!("prop"));
         assert_eq!(path.to_string(), "obj/prop");
 
         // Map entry path
-        let path = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .map_key(store_key!("key"))
-            .build();
+        let path = StorePath::new(store_key!("obj"))
+            .with_segment(store_key!("prop"))
+            .with_segment(store_key!("key"));
         assert_eq!(path.to_string(), "obj/prop/key");
 
         // Struct item path from property
-        let path = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .struct_item(store_key!("item"))
-            .build();
+        let path = StorePath::new(store_key!("obj"))
+            .with_segment(store_key!("prop"))
+            .with_segment(store_key!("item"));
         assert_eq!(path.to_string(), "obj/prop/item");
 
         // Struct item path from map entry
-        let path = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .map_key(store_key!("key"))
-            .struct_item(store_key!("item"))
-            .build();
+        let path = StorePath::new(store_key!("obj"))
+            .with_segment(store_key!("prop"))
+            .with_segment(store_key!("key"))
+            .with_segment(store_key!("item"));
         assert_eq!(path.to_string(), "obj/prop/key/item");
     }
 
@@ -503,74 +319,5 @@ mod tests {
         assert_eq!(p1, &p2);
         assert_eq!(&p1, p2);
         assert_eq!(&p1, &p2);
-    }
-
-    #[test]
-    fn test_to_builder() {
-        let path = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .build();
-
-        let path2 = path.to_builder().map_key(store_key!("key")).build();
-
-        assert_eq!(path2.object_key().as_str(), "obj");
-        assert_eq!(path2.segments().len(), 2);
-
-        // AnyState builder extends the path
-        let path3 = path2.to_builder().property(store_key!("more")).build();
-        assert_eq!(path3.segments().len(), 3);
-    }
-
-    #[test]
-    fn test_builder_states() {
-        // ObjectState -> build
-        let p = StorePathBuilder::new(store_key!("obj").into()).build();
-        assert!(p.segments().is_empty());
-
-        // ObjectState -> property -> build
-        let p = StorePathBuilder::new(store_key!("obj").into())
-            .property(store_key!("prop"))
-            .build();
-        assert_eq!(p.segments().len(), 1);
-
-        // PropertyState -> map_key -> build
-        let p = StorePathBuilder::new(store_key!("obj").into())
-            .property(store_key!("prop"))
-            .map_key(store_key!("key"))
-            .build();
-        assert_eq!(p.segments().len(), 2);
-
-        // PropertyState -> struct_item -> build
-        let p = StorePathBuilder::new(store_key!("obj").into())
-            .property(store_key!("prop"))
-            .struct_item(store_key!("item"))
-            .build();
-        assert_eq!(p.segments().len(), 2);
-
-        // MapEntryState -> struct_item -> build
-        let p = StorePathBuilder::new(store_key!("obj").into())
-            .property(store_key!("prop"))
-            .map_key(store_key!("key"))
-            .struct_item(store_key!("item"))
-            .build();
-        assert_eq!(p.segments().len(), 3);
-
-        // ObjectState -> to_any
-        let p = StorePathBuilder::new(store_key!("obj").into())
-            .to_any()
-            .property(store_key!("prop"))
-            .build();
-        assert_eq!(p.segments().len(), 1);
-    }
-
-    #[test]
-    fn test_display() {
-        let p = StorePath::builder(store_key!("obj"))
-            .property(store_key!("prop"))
-            .map_key(store_key!("key"))
-            .struct_item(store_key!("item"))
-            .build();
-
-        assert_eq!(p.to_string(), "obj/prop/key/item");
     }
 }

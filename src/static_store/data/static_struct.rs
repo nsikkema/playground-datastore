@@ -1,6 +1,6 @@
 use crate::StoreError;
-use crate::StoreKey;
 use crate::definition::{StructDefinition, StructItemDefinition};
+use crate::key::StoreKey;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::{StaticBasic, StaticTable};
 use crate::store::TreePrint;

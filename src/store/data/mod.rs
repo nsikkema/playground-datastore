@@ -1,15 +1,16 @@
 /// Basic data items.
-mod basic;
+pub(crate) mod basic;
 /// Container data items.
-mod container;
+pub(crate) mod container;
 /// Internal hash container.
 pub(crate) mod hash_container;
 /// Object data items.
-mod object;
+pub(crate) mod object;
 /// Table data items.
-mod table;
+pub(crate) mod table;
 
 pub(crate) use basic::*;
 pub(crate) use container::*;
+pub(crate) use hash_container::*;
 pub(crate) use object::*;
 pub(crate) use table::*;

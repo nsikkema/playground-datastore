@@ -1,10 +1,12 @@
+use crate::StoreError;
 use crate::definition::ObjectDefinition;
+use crate::key::StoreKey;
+use crate::path::StorePath;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::StaticStore;
 use crate::store::data::{Basic, Container, ContainerItem, Object, Table};
 use crate::store::traits::{CommonStoreTraitInternal, TreePrint};
 use crate::store::{BasicProxy, ContainerProxy, ObjectProxy, TableProxy};
-use crate::{StoreError, StoreKey, StorePath};
 use parking_lot::RwLock;
 use rustc_hash::FxHashMap;
 use std::sync::Arc;
@@ -173,7 +175,7 @@ impl Store {
         let last_sync_hash = object.current_shared_hash();
 
         #[expect(unsafe_code)]
-        let store_path = StorePath::builder(unsafe { StoreKey::new_unsafe(key) }).build();
+        let store_path = StorePath::new(unsafe { StoreKey::new_unsafe(key) });
 
         Ok(ObjectProxy::new(
             store_path.clone(),
@@ -492,9 +494,9 @@ impl Store {
 fn split_path(path: &StorePath) -> Result<(StorePath, StoreKey), StoreError> {
     let mut segments = path.segments().clone();
     let last_segment = segments.pop().ok_or(StoreError::InvalidPath)?;
-    let mut parent_path = StorePath::builder(path.object_key().clone()).build();
+    let mut parent_path = StorePath::new(path.object_key().clone());
     for segment in segments {
-        parent_path = parent_path.add_segment(segment);
+        parent_path = parent_path.clone().with_segment(segment);
     }
     Ok((parent_path, last_segment))
 }

@@ -1,9 +1,9 @@
 /// Internal string interning store.
-mod store;
+pub mod store;
 /// The `ShareableString` type.
-mod string;
+pub mod string;
 /// A map for storing translations of `ShareableString`s.
-mod translation_map;
+pub mod translation_map;
 
 pub use store::*;
 pub use string::*;

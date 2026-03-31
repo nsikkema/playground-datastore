@@ -1,6 +1,6 @@
 use crate::StoreError;
-use crate::StoreKey;
 use crate::definition::MapDefinition;
+use crate::key::StoreKey;
 use crate::shareable_string::ShareableString;
 use crate::static_store::data::StaticStruct;
 use crate::store::TreePrint;

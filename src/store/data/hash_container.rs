@@ -3,7 +3,7 @@ use std::sync::Arc;
 
 /// A thread-safe container for a BLAKE3 hash.
 #[derive(Debug, Clone)]
-pub struct StoreHashContainer {
+pub(crate) struct StoreHashContainer {
     hash: Arc<RwLock<[u8; 32]>>,
 }
 
@@ -21,7 +21,7 @@ impl StoreHashContainer {
     }
 
     /// Returns the current hash value.
-    pub fn get(&self) -> [u8; 32] {
+    pub(crate) fn get(&self) -> [u8; 32] {
         *self.hash.read()
     }
 

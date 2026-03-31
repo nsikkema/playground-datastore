@@ -1,7 +1,8 @@
 use datastore::definition::{
     BasicDefinition, BasicDefinitionType, StructDefinition, StructItemDefinition, TableDefinition,
 };
-use datastore::{StoreKey, store_key};
+use datastore::key::StoreKey;
+use datastore::store_key;
 
 #[test]
 fn test_struct_all_basic_definition() {

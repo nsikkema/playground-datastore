@@ -1,8 +1,10 @@
+use crate::StoreError;
 use crate::definition::TableDefinition;
+use crate::key::StoreKey;
+use crate::path::StorePath;
 use crate::shareable_string::ShareableString;
 use crate::store::traits::TreePrint;
-use crate::store::{CommonStoreTraitInternal, ObjectProxy, ProxyStoreTrait, Store, Table};
-use crate::{StoreError, StoreKey, StorePath};
+use crate::store::{CommonStoreTraitInternal, ObjectProxy, Store, Table};
 use std::collections::BTreeMap;
 
 /// A proxy for a table in the store.
@@ -67,37 +69,49 @@ impl TableProxy {
     }
 
     /// Sets the values of a row in the table.
-    pub fn set_row<S: Into<ShareableString>>(
+    pub fn set_row<K, V>(
         &mut self,
         row_index: usize,
-        values: Vec<S>,
-    ) -> Result<(), StoreError> {
-        let values: Vec<ShareableString> = values
+        values: BTreeMap<K, V>,
+    ) -> Result<(), StoreError>
+    where
+        K: Into<ShareableString> + Ord,
+        V: Into<ShareableString>,
+    {
+        let values: BTreeMap<ShareableString, ShareableString> = values
             .into_iter()
-            .map(|v| self.store.launder_string(v.into()))
+            .map(|(k, v)| {
+                (
+                    self.store.launder_string(k.into()),
+                    self.store.launder_string(v.into()),
+                )
+            })
             .collect();
         self.data.set_row(row_index, values)
     }
-}
 
-impl ProxyStoreTrait for TableProxy {
-    fn path(&self) -> &StorePath {
+    /// Returns the path to the data this proxy represents.
+    pub fn path(&self) -> &StorePath {
         &self.path
     }
 
-    fn description(&self) -> ShareableString {
+    /// Returns a description of the data.
+    pub fn description(&self) -> ShareableString {
         self.definition().description()
     }
 
-    fn is_valid(&self) -> bool {
+    /// Checks if the proxy is still valid.
+    pub fn is_valid(&self) -> bool {
         self.data.is_valid()
     }
 
-    fn has_changed(&self) -> bool {
+    /// Returns true if the data has changed compared to the store.
+    pub fn has_changed(&self) -> bool {
         self.data.has_changed()
     }
 
-    fn pull(&mut self) -> Result<(), StoreError> {
+    /// Pulls the latest data from the store.
+    pub fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
             let proxy = match self.store.table(&self.path) {
                 Ok(p) => p,
@@ -122,7 +136,8 @@ impl ProxyStoreTrait for TableProxy {
         Ok(())
     }
 
-    fn push(&mut self) -> Result<(), StoreError> {
+    /// Pushes the local changes to the store.
+    pub fn push(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
             let proxy = match self.store.table(&self.path) {
                 Ok(p) => p,
@@ -140,7 +155,8 @@ impl ProxyStoreTrait for TableProxy {
         Ok(())
     }
 
-    fn object(&self) -> Result<ObjectProxy, StoreError> {
+    /// Returns an `ObjectProxy` for the object containing this data.
+    pub fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
     }

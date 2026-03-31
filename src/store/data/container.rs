@@ -1,8 +1,9 @@
+use crate::StoreError;
 use crate::definition::{MapDefinition, StructDefinition, StructItemDefinition};
+use crate::key::StoreKey;
 use crate::shareable_string::SharedStringStore;
 use crate::static_store::data::{StaticMap, StaticProperty, StaticStruct, StaticStructItem};
 use crate::store::{Basic, CommonStoreTraitInternal, StoreHashContainer, Table, TreePrint};
-use crate::{StoreError, StoreKey};
 use rustc_hash::FxHashMap;
 
 /// An item stored within a `Container`.

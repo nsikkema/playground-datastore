@@ -1,14 +1,14 @@
 /// Core implementation of the dynamic store.
-mod core;
+pub mod core;
 /// Data types and structures for the dynamic store.
 pub(crate) mod data;
 /// Proxy objects for accessing store data.
-mod proxy;
+pub mod proxy;
 /// Traits used throughout the store.
-mod traits;
+pub mod traits;
 
-pub use core::*;
-pub use data::hash_container::*;
-pub(in crate::store) use data::*;
+pub use core::Store;
+pub(crate) use data::*;
 pub use proxy::*;
-pub use traits::*;
+pub(crate) use traits::CommonStoreTraitInternal;
+pub use traits::TreePrint;

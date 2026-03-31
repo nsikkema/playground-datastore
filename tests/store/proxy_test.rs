@@ -8,8 +8,9 @@ use datastore::definition::{
     TableDefinition,
 };
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
+use datastore::store::Store;
 use datastore::store_key;
+use std::collections::BTreeMap;
 
 #[test]
 fn test_complex_proxy_structure() {
@@ -57,18 +58,14 @@ fn test_complex_proxy_structure() {
     let table_path = struct_proxy
         .path()
         .clone()
-        .to_builder()
-        .struct_item(store_key!("table"))
-        .build();
+        .with_segment(store_key!("table"));
     let mut table_proxy = store.table(&table_path).unwrap();
 
     // 7. Access Basic Proxy from Struct
     let basic_path = struct_proxy
         .path()
         .clone()
-        .to_builder()
-        .struct_item(store_key!("inner_basic"))
-        .build();
+        .with_segment(store_key!("inner_basic"));
     let mut basic_proxy = store.basic(&basic_path).unwrap();
 
     // 8. Modify values at deep levels
@@ -79,7 +76,9 @@ fn test_complex_proxy_structure() {
     table_proxy.set_cell(0, "col1", "new_value").unwrap();
 
     table_proxy.append_row();
-    table_proxy.set_row(1, vec!["new_value"]).unwrap();
+    table_proxy
+        .set_row(1, BTreeMap::from([("col1", "new_value")]))
+        .unwrap();
 
     // 9. Check change detection
     assert!(basic_proxy.has_changed());
@@ -174,7 +173,7 @@ fn test_proxy_deleted_object() {
     let obj_def = builder.finish();
 
     // 2. Create Object in Store
-    let obj_key: datastore::StoreKey = store_key!("my_object").into();
+    let obj_key: datastore::key::StoreKey = store_key!("my_object").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     assert!(obj_proxy.is_valid());

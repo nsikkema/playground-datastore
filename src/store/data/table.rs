@@ -1,8 +1,9 @@
+use crate::StoreError;
 use crate::definition::TableDefinition;
+use crate::key::StoreKey;
 use crate::shareable_string::{ShareableString, SharedStringStore};
 use crate::static_store::data::StaticTable;
 use crate::store::{CommonStoreTraitInternal, StoreHashContainer, TreePrint};
-use crate::{StoreError, StoreKey};
 use std::collections::BTreeMap;
 
 /// Represents a table of data in the store.
@@ -123,11 +124,11 @@ impl Table {
     pub(crate) fn set_row(
         &mut self,
         row_index: usize,
-        values: Vec<ShareableString>,
+        values: BTreeMap<ShareableString, ShareableString>,
     ) -> Result<(), StoreError> {
         if let Some(row) = self.rows.get_mut(row_index) {
-            for (value, key) in values.into_iter().zip(self.definition.keys()) {
-                if let Some(cell) = row.get_mut(key) {
+            for (key, value) in values {
+                if let Some(cell) = row.get_mut(key.as_str()) {
                     *cell = value;
                 }
             }

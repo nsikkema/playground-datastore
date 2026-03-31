@@ -4,13 +4,8 @@
 //! Shows how to define reusable struct types, key-value maps, and row-based
 //! tables, then create and populate them in a [`Store`] using proxy-based access
 //! and [`StorePath`] navigation.
-use datastore::StorePath;
-use datastore::definition::{
-    BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
-    TableDefinition,
-};
-use datastore::store::{ProxyStoreTrait, Store};
-use datastore::{path, store_key};
+use datastore::prelude::*;
+use std::collections::BTreeMap;
 
 fn main() {
     // 1. Create a Store
@@ -110,7 +105,12 @@ fn main() {
     table_proxy.set_cell(0, "quantity", "50").unwrap();
 
     table_proxy.append_row();
-    table_proxy.set_row(1, vec!["widget_b", "25"]).unwrap();
+    table_proxy
+        .set_row(
+            1,
+            BTreeMap::from([("item_id", "widget_b"), ("quantity", "25")]),
+        )
+        .unwrap();
 
     table_proxy.push().unwrap();
 

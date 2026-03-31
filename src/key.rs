@@ -1,5 +1,6 @@
 use crate::StoreError;
-use crate::shareable_string::{ShareableString, SharedStringStore};
+use crate::shareable_string::store::SharedStringStore;
+use crate::shareable_string::string::ShareableString;
 use serde::{Deserialize, Serialize};
 use std::fmt::Display;
 use std::hash::Hash;

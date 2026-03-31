@@ -1,10 +1,10 @@
+use crate::StoreError;
 use crate::definition::ObjectDefinition;
+use crate::key::StoreKey;
+use crate::path::StorePath;
 use crate::shareable_string::ShareableString;
 use crate::store::traits::TreePrint;
-use crate::store::{
-    BasicProxy, ContainerProxy, ProxyStoreTrait, Store, StoreHashContainer, TableProxy,
-};
-use crate::{StoreError, StoreKey, StorePath};
+use crate::store::{BasicProxy, ContainerProxy, Store, StoreHashContainer, TableProxy};
 
 /// A proxy for a top-level object in the store.
 #[derive(Debug)]
@@ -37,11 +37,6 @@ impl ObjectProxy {
         }
     }
 
-    /// Returns true if the object has changed compared to the last sync.
-    pub fn has_changed(&self) -> bool {
-        self.last_sync_hash != self.object_hash.get()
-    }
-
     /// Returns the keys of the properties in the object.
     pub fn keys(&self) -> &Vec<StoreKey> {
         &self.keys
@@ -69,7 +64,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.basic(&path)
     }
 
@@ -84,7 +79,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.table(&path)
     }
 
@@ -102,7 +97,7 @@ impl ObjectProxy {
 
         #[expect(unsafe_code)]
         let store_key = unsafe { StoreKey::new_unsafe(key) };
-        let path = self.path.clone().to_builder().property(store_key).build();
+        let path = self.path.clone().with_segment(store_key);
         self.store.container(&path)
     }
 
@@ -110,26 +105,29 @@ impl ObjectProxy {
     pub fn all_property_keys(&self) -> Result<Vec<StoreKey>, StoreError> {
         Ok(self.keys.clone())
     }
-}
 
-impl ProxyStoreTrait for ObjectProxy {
-    fn path(&self) -> &StorePath {
+    /// Returns the path to the data this proxy represents.
+    pub fn path(&self) -> &StorePath {
         &self.path
     }
 
-    fn description(&self) -> ShareableString {
+    /// Returns a description of the data.
+    pub fn description(&self) -> ShareableString {
         self.definition.description()
     }
 
-    fn is_valid(&self) -> bool {
+    /// Checks if the proxy is still valid.
+    pub fn is_valid(&self) -> bool {
         self.object_hash.get() != [0u8; 32]
     }
 
-    fn has_changed(&self) -> bool {
+    /// Returns true if the data has changed compared to the store.
+    pub fn has_changed(&self) -> bool {
         self.last_sync_hash != self.object_hash.get()
     }
 
-    fn pull(&mut self) -> Result<(), StoreError> {
+    /// Pulls the latest data from the store.
+    pub fn pull(&mut self) -> Result<(), StoreError> {
         if !self.is_valid() {
             let proxy = match self.store.object(self.path.object_key()) {
                 Ok(p) => p,
@@ -157,25 +155,8 @@ impl ProxyStoreTrait for ObjectProxy {
         Ok(())
     }
 
-    fn push(&mut self) -> Result<(), StoreError> {
-        if !self.is_valid() {
-            let proxy = match self.store.object(self.path.object_key()) {
-                Ok(p) => p,
-                Err(_) => return Err(StoreError::ExpiredProxy),
-            };
-            if proxy.definition == self.definition {
-                self.keys = proxy.keys;
-                self.object_hash = proxy.object_hash;
-                self.last_sync_hash = proxy.last_sync_hash;
-            } else {
-                return Err(StoreError::ExpiredProxy);
-            }
-        }
-        self.last_sync_hash = self.object_hash.get(); // Sync hash after push
-        Ok(())
-    }
-
-    fn object(&self) -> Result<ObjectProxy, StoreError> {
+    /// Returns an `ObjectProxy` for the object containing this data.
+    pub fn object(&self) -> Result<ObjectProxy, StoreError> {
         let key = self.path.object_key();
         self.store.object(key)
     }

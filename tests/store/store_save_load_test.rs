@@ -8,9 +8,10 @@ use datastore::definition::{
     BasicDefinition, ChoiceDefinition, FileDefinition, MapDefinition, ObjectDefinition,
     PropertyDefinition, StructDefinition, StructItemDefinition, TableDefinition,
 };
+use datastore::path::StorePath;
 use datastore::shareable_string::SharedStringStore;
-use datastore::store::{ProxyStoreTrait, Store};
-use datastore::{StorePath, store_key};
+use datastore::store::Store;
+use datastore::store_key;
 use std::fs;
 
 #[test]
@@ -25,9 +26,7 @@ fn test_save_load_file() {
         .finish();
 
     let _proxy = store.create_object(obj_key.clone(), &def).unwrap();
-    let prop_path = StorePath::builder(obj_key)
-        .property(store_key!("prop1"))
-        .build();
+    let prop_path = StorePath::new(obj_key).with_segment(store_key!("prop1"));
 
     {
         let mut basic = store.basic(&prop_path).unwrap();
@@ -146,7 +145,7 @@ fn test_save_load_comprehensive() {
         .with_inserted(store_key!("p_map"), PropertyDefinition::new("Map", map_def))
         .finish();
 
-    let obj_key: datastore::StoreKey = store_key!("comp_obj").into();
+    let obj_key: datastore::key::StoreKey = store_key!("comp_obj").into();
     let mut obj_proxy = store.create_object(obj_key.clone(), &obj_def).unwrap();
 
     // 3. Populate data
@@ -181,9 +180,7 @@ fn test_save_load_comprehensive() {
             .unwrap()
             .path()
             .clone()
-            .to_builder()
-            .struct_item(store_key!("s_basic"))
-            .build();
+            .with_segment(store_key!("s_basic"));
         let mut p = store.basic(&path).unwrap();
         p.set_value("Struct Value");
         p.push().unwrap();
@@ -195,9 +192,7 @@ fn test_save_load_comprehensive() {
             .unwrap()
             .path()
             .clone()
-            .to_builder()
-            .struct_item(store_key!("s_table"))
-            .build();
+            .with_segment(store_key!("s_table"));
         let mut p = store.table(&path).unwrap();
         p.append_row();
         p.set_cell(0, "col_str", "Row 0").unwrap();
@@ -218,11 +213,7 @@ fn test_save_load_comprehensive() {
         let entry_proxy = map_container.insert_map_entry(item_key).unwrap();
         let path = entry_proxy.path();
         // Entry in the map is a Struct.
-        let basic_path = path
-            .clone()
-            .to_builder()
-            .struct_item(store_key!("s_basic"))
-            .build();
+        let basic_path = path.clone().with_segment(store_key!("s_basic"));
         let mut p = store.basic(&basic_path).unwrap();
         p.set_value("Map Struct Value");
         p.push().unwrap();
@@ -273,30 +264,26 @@ fn test_save_load_comprehensive() {
     );
 
     // Verify Struct
-    let s_basic_path = StorePath::builder(obj_key.clone())
-        .property(store_key!("p_struct"))
-        .struct_item(store_key!("s_basic"))
-        .build();
+    let s_basic_path = StorePath::new(obj_key.clone())
+        .with_segment(store_key!("p_struct"))
+        .with_segment(store_key!("s_basic"));
     assert_eq!(
         loaded_store.basic(&s_basic_path).unwrap().value().as_ref(),
         "Struct Value"
     );
 
     // Verify Map
-    let m_basic_path = StorePath::builder(obj_key.clone())
-        .property(store_key!("p_map"))
-        .map_key(store_key!("entry_1"))
-        .struct_item(store_key!("s_basic"))
-        .build();
+    let m_basic_path = StorePath::new(obj_key.clone())
+        .with_segment(store_key!("p_map"))
+        .with_segment(store_key!("entry_1"))
+        .with_segment(store_key!("s_basic"));
     assert_eq!(
         loaded_store.basic(&m_basic_path).unwrap().value().as_ref(),
         "Map Struct Value"
     );
 
     // Verify Table
-    let table_path = StorePath::builder(obj_key.clone())
-        .property(store_key!("p_table"))
-        .build();
+    let table_path = StorePath::new(obj_key.clone()).with_segment(store_key!("p_table"));
     let loaded_table = loaded_store.table(&table_path).unwrap();
     assert_eq!(loaded_table.row_count(), 1);
     assert_eq!(

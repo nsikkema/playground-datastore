@@ -59,6 +59,14 @@ fn test_store_error_display() {
         format!("{}", StoreError::MissingSchema("schema".to_string())),
         "Missing schema: schema"
     );
+    assert_eq!(
+        format!("{}", StoreError::SchemaMismatch("mismatch".to_string())),
+        "Schema mismatch: mismatch"
+    );
+    assert_eq!(
+        format!("{}", StoreError::NestedContainerNotSupported),
+        "Nested containers are not supported in this context"
+    );
 }
 
 #[test]
@@ -72,18 +80,134 @@ fn test_store_error_partial_eq() {
         StoreError::KeyInvalidCharacter("a".to_string()),
         StoreError::KeyInvalidCharacter("b".to_string())
     );
+    assert_eq!(
+        StoreError::InvalidPathSegment("seg".to_string()),
+        StoreError::InvalidPathSegment("seg".to_string())
+    );
+    assert_ne!(
+        StoreError::InvalidPathSegment("a".to_string()),
+        StoreError::InvalidPathSegment("b".to_string())
+    );
+    assert_eq!(
+        StoreError::SerializationError("e".to_string()),
+        StoreError::SerializationError("e".to_string())
+    );
+    assert_ne!(
+        StoreError::SerializationError("a".to_string()),
+        StoreError::SerializationError("b".to_string())
+    );
+    assert_eq!(
+        StoreError::PropertyConflict(ShareableString::from("c")),
+        StoreError::PropertyConflict(ShareableString::from("c"))
+    );
+    assert_ne!(
+        StoreError::PropertyConflict(ShareableString::from("a")),
+        StoreError::PropertyConflict(ShareableString::from("b"))
+    );
+    assert_eq!(
+        StoreError::SchemaMismatch("x".to_string()),
+        StoreError::SchemaMismatch("x".to_string())
+    );
+    assert_ne!(
+        StoreError::SchemaMismatch("x".to_string()),
+        StoreError::SchemaMismatch("y".to_string())
+    );
+    assert_eq!(
+        StoreError::MissingSchema("s".to_string()),
+        StoreError::MissingSchema("s".to_string())
+    );
+    assert_ne!(
+        StoreError::MissingSchema("a".to_string()),
+        StoreError::MissingSchema("b".to_string())
+    );
+    assert_eq!(
+        StoreError::NestedContainerNotSupported,
+        StoreError::NestedContainerNotSupported
+    );
     assert_ne!(StoreError::KeyEmpty, StoreError::ObjectNotFound);
+    assert_ne!(
+        StoreError::NestedContainerNotSupported,
+        StoreError::InvalidPath
+    );
 }
 
 #[test]
 fn test_store_error_clone() {
     let err = StoreError::KeyInvalidCharacter("abc".to_string());
-    let cloned_err = err.clone();
-    assert_eq!(err, cloned_err);
+    assert_eq!(err.clone(), err);
+
+    let err = StoreError::SerializationError("oops".to_string());
+    assert_eq!(err.clone(), err);
+
+    let err = StoreError::PropertyConflict(ShareableString::from("field"));
+    assert_eq!(err.clone(), err);
+
+    let err = StoreError::SchemaMismatch("bad".to_string());
+    assert_eq!(err.clone(), err);
+
+    let err = StoreError::NestedContainerNotSupported;
+    assert_eq!(err.clone(), err);
+
+    let err = StoreError::KeyEmpty;
+    assert_eq!(err.clone(), err);
 }
 
 #[test]
 fn test_store_error_debug() {
-    let err = StoreError::KeyEmpty;
-    assert_eq!(format!("{:?}", err), "KeyEmpty");
+    assert_eq!(format!("{:?}", StoreError::KeyEmpty), "KeyEmpty");
+    assert_eq!(
+        format!("{:?}", StoreError::KeyInvalidCharacter("x!".to_string())),
+        r#"KeyInvalidCharacter("x!")"#
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::ObjectNotFound),
+        "ObjectNotFound"
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::ObjectKeyAlreadyExists),
+        "ObjectKeyAlreadyExists"
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::PropertyNotFound),
+        "PropertyNotFound"
+    );
+    assert_eq!(format!("{:?}", StoreError::ExpiredProxy), "ExpiredProxy");
+    assert_eq!(format!("{:?}", StoreError::KeyNotFound), "KeyNotFound");
+    assert_eq!(format!("{:?}", StoreError::InvalidPath), "InvalidPath");
+    assert_eq!(
+        format!("{:?}", StoreError::InvalidPathSegment("seg".to_string())),
+        r#"InvalidPathSegment("seg")"#
+    );
+    assert_eq!(format!("{:?}", StoreError::IndexNotFound), "IndexNotFound");
+    assert_eq!(
+        format!("{:?}", StoreError::UndoNotAvailable),
+        "UndoNotAvailable"
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::RedoNotAvailable),
+        "RedoNotAvailable"
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::SerializationError("err".to_string())),
+        r#"SerializationError("err")"#
+    );
+    assert_eq!(
+        format!(
+            "{:?}",
+            StoreError::PropertyConflict(ShareableString::from("conflict"))
+        ),
+        format!("PropertyConflict({:?})", ShareableString::from("conflict"))
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::MissingSchema("s".to_string())),
+        r#"MissingSchema("s")"#
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::SchemaMismatch("m".to_string())),
+        r#"SchemaMismatch("m")"#
+    );
+    assert_eq!(
+        format!("{:?}", StoreError::NestedContainerNotSupported),
+        "NestedContainerNotSupported"
+    );
 }

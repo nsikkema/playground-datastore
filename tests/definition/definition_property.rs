@@ -1,13 +1,8 @@
-//! Integration tests that verify the correctness of definition validation logic.
-//!
-//! Tests span all definition kinds – [`BasicDefinition`], [`ObjectDefinition`],
-//! [`StructDefinition`], [`MapDefinition`], and [`TableDefinition`] – checking their constructors,
-//! accessors, and serialization round-trips.
 use datastore::definition::{
-    BasicDefinition, MapDefinition, ObjectDefinition, PropertyDefinition, StructDefinition,
-    StructItemDefinition, TableDefinition,
+    BasicDefinition, MapDefinition, PropertyDefinition, StructDefinition, StructItemDefinition,
+    TableDefinition,
 };
-use datastore::{StoreKey, store_key};
+use datastore::key::StoreKey;
 
 #[test]
 fn test_property_definition() {
@@ -90,17 +85,27 @@ fn test_property_gui_visibility() {
 }
 
 #[test]
-fn test_object_definition_basic() {
-    // Why: Test object definition creation and properties.
-    let mut builder = ObjectDefinition::builder("Test Object");
-    builder.insert(
-        store_key!("prop1"),
-        PropertyDefinition::new("P1", BasicDefinition::new_string("D1")),
-    );
-    let obj_def = builder.finish();
+fn test_property_definition_type_equality() {
+    // Why: Test that two property definition items with the same properties are considered equal and ref equal.
+    let def_1 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("String"));
+    let def_2 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("String"));
+    let def_3 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("New String"));
 
-    assert_eq!(obj_def.description().as_ref(), "Test Object");
-    assert_eq!(obj_def.count(), 1);
-    assert!(obj_def.contains_key(store_key!("prop1")));
-    assert!(obj_def.contains_key_str("prop1"));
+    assert_eq!(*def_1.item_type(), *def_2.item_type());
+    assert_ne!(*def_1.item_type(), *def_3.item_type());
+    assert_eq!(*def_1.item_type(), def_2.item_type());
+    assert_ne!(def_1.item_type(), *def_3.item_type());
+}
+
+#[test]
+fn test_property_definition_equality() {
+    // Why: Test that two property definitions with the same properties are considered equal and ref equal.
+    let def_1 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("String"));
+    let def_2 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("String"));
+    let def_3 = PropertyDefinition::new("Basic Prop", BasicDefinition::new_string("New String"));
+
+    assert_eq!(def_1, def_2);
+    assert_ne!(def_1, def_3);
+    assert_eq!(&def_1, def_2);
+    assert_ne!(def_1, &def_3);
 }

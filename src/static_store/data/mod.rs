@@ -1,15 +1,15 @@
 /// Static basic data.
-mod static_basic;
+pub mod static_basic;
 /// Static map data.
-mod static_map;
+pub mod static_map;
 /// Static object data.
-mod static_object;
+pub mod static_object;
 /// Static property data.
-mod static_property;
+pub mod static_property;
 /// Static struct data.
-mod static_struct;
+pub mod static_struct;
 /// Static table data.
-mod static_table;
+pub mod static_table;
 
 pub use static_basic::*;
 pub use static_map::*;
